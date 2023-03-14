@@ -79,6 +79,9 @@ void PS(in  float4 Pos     : SV_Position,
             // https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
             // Also see eq. 92 in  https://google.github.io/filament/Filament.md.html#lighting/imagebasedlights
             // Note that VoH / (NormalDistribution_GGX(H,Roughness) * NoH) term comes from importance sampling
+            
+            //https://google.github.io/filament/Filament.md.html#importancesamplingfortheibl
+            //为什么会多一个4，因为这里原本是采样入射光L，但不知道L的分布，只知道D项分布，所以采样的是H，由此引入了Jacobian of the transform
             float G_Vis = 4.0 * SmithGGXVisibilityCorrelated(NoL, NoV, linearRoughness) * VoH * NoL / NoH;
             float Fc = pow(1.0 - VoH, 5.0);
             scale += (1.0 - Fc) * G_Vis;
