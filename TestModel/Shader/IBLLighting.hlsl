@@ -27,8 +27,8 @@ IBLContribution IBL(
 	float3 specularLight = PrefilteredEnvMap.SampleLevel(samLinearClamp, reflection, lod).rgb;
 
 	IBLContribution IBLContrib;
-	IBLContrib.Diffuse = diffuseLight * BRDF.DiffuseColor;
-	IBLContrib.Specular = specularLight * (BRDF.F0 * brdf.x + BRDF.F90 * brdf.y);
+	IBLContrib.Diffuse = diffuseLight * BRDF.diffuseColor;
+	IBLContrib.Specular = specularLight * (BRDF.f0 * brdf.x + BRDF.f90 * brdf.y);
 	//IBLContrib.Specular = specularLight;
 	return IBLContrib;
 }

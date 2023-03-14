@@ -35,11 +35,21 @@ cbuffer PassConstants: register(b1)
     float4x4 g_ViewProj;
     float4x4 g_ViewProjInvert;
     float3 g_CameraPos;
-    float pad0;
+    float pass_pad0;
     int3 g_FirstLightIndex;
     int g_PrefilteredEnvMipLevels;
     int g_DebugViewType;
 };
+
+cbuffer MaterialConstants: register(b2)
+{
+    float4 g_BaseColorFactor;
+    float g_RoughnessFactor;
+    float g_MetallicFactor;
+    float mat_pad0;
+    float mat_pad1;
+    bool g_HasUV;
+}
 
 struct VSInput
 {
@@ -88,8 +98,6 @@ void VS(VSInput VSIn, out PSInput PSIn)
 
 void PS(in  PSInput  PSIn, out PSOutput PSOut)
 {
-    float4 baseColor = g_BaseColorMap.Sample(g_samLinearWrap, PSIn.TexC);
-    float4 roughnessMetallic = g_RoughnessMetallicMap.Sample(g_samLinearWrap, PSIn.TexC);
     float3 normalMap = g_NormalMap.Sample(g_samLinearWrap, PSIn.TexC).rgb * float3(2.0, 2.0, 2.0) - float3(1.0, 1.0, 1.0);
 
     // We have to compute gradients in uniform flow control to avoid issues with perturbed normal
@@ -99,20 +107,29 @@ void PS(in  PSInput  PSIn, out PSOutput PSOut)
     float2 dUV_dy = ddy(PSIn.TexC);
     float3 normal = normalize(PSIn.NormalW);
 
-    float3 perturbedNormal = TransformTangentSpaceNormalGrad(dWorldPos_dx, dWorldPos_dy, dUV_dx, dUV_dy, normal, normalMap);
-    //float3 perturbedNormal = normal;
+    float3 perturbedNormal = TransformTangentSpaceNormalGrad(dWorldPos_dx, 
+        dWorldPos_dy, 
+        dUV_dx, 
+        dUV_dy, 
+        normal, 
+        normalMap,
+        g_HasUV
+    );
 
-    BRDFData BRDF;
-    BRDF.baseColor = baseColor.rgb;
-    BRDF.roughness = saturate(roughnessMetallic.g);
-    BRDF.metallic = saturate(roughnessMetallic.b);
-    BRDF.DiffuseColor = float3(0.0, 0.0, 0.0);
-    BRDF.F0 = 0.0;
-    BRDF.F90 = 0.0;
+    // GetBRDF
+    BRDFData BRDF = GetBRDF(g_BaseColorMap, 
+        g_RoughnessMetallicMap, 
+        g_NormalMap, 
+        PSIn.TexC,
+        g_samLinearWrap,
+        g_BaseColorFactor,
+        g_RoughnessFactor,
+        g_MetallicFactor
+    );
 
     float3 view = normalize(g_CameraPos - PSIn.PosW);
 
-    float4 litColor = float4(0.0, 0.0, 0.0, baseColor.a);
+    float4 litColor = float4(0.0, 0.0, 0.0, BRDF.baseColor.a);
 
     //Directional
     for (int i = 0; i < g_FirstLightIndex.x; i++)
@@ -136,9 +153,9 @@ void PS(in  PSInput  PSIn, out PSOutput PSOut)
     {
         switch (g_DebugViewType)
         {
-        case 1:PSOut.Color.rgb = BRDF.baseColor;
+        case 1:PSOut.Color.rgb = BRDF.baseColor.rgb;
             break;
-        case 2:PSOut.Color = float4(baseColor.a, baseColor.a, baseColor.a, 1.0);
+        case 2:PSOut.Color = float4(BRDF.baseColor.a, BRDF.baseColor.a, BRDF.baseColor.a, 1.0);
             break;
         case 3:PSOut.Color.rgb = sRGB_Linear(normalMap.rgb);
             break;
@@ -148,11 +165,11 @@ void PS(in  PSInput  PSIn, out PSOutput PSOut)
             break;
         case 7:PSOut.Color.rgb = sRGB_Linear(BRDF.roughness * float3(1.0, 1.0, 1.0));
             break;
-        case 8:PSOut.Color.rgb = BRDF.DiffuseColor;
+        case 8:PSOut.Color.rgb = BRDF.diffuseColor;
             break;
-        case 9:PSOut.Color.rgb = BRDF.F0;
+        case 9:PSOut.Color.rgb = BRDF.f0;
             break;
-        case 10:PSOut.Color.rgb = BRDF.F90;
+        case 10:PSOut.Color.rgb = BRDF.f90;
             break;
         case 11:PSOut.Color.rgb = sRGB_Linear(normal);
             break;

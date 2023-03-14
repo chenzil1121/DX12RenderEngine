@@ -4,7 +4,6 @@ Buffer::Buffer(RenderDevice* Device, const void* initData, UINT64 byteSize, bool
 	pDevice(Device),
 	m_DynamicFlag(IsDynamic)
 {
-
 	m_ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
 
 	if (!m_DynamicFlag)

@@ -9,10 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="资源文件">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="imgui">
       <UniqueIdentifier>{48330e64-d0c8-4094-9cf4-fe62291d2a6c}</UniqueIdentifier>
     </Filter>
@@ -56,6 +52,9 @@
     </ClCompile>
     <ClCompile Include="..\ThirdParty\imgui\imGuIZMO.quat\imGuIZMOquat.cpp">
       <Filter>imgui\imGUIZMO.quat</Filter>
+    </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -109,6 +108,9 @@
     </ClInclude>
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\vgMath.h">
       <Filter>imgui\imGUIZMO.quat</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

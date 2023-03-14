@@ -3,10 +3,10 @@
 #include "Common.hlsl"
 struct BRDFData
 {
-	float3 baseColor;
-	float3 DiffuseColor;
-	float3 F0;
-	float3 F90;
+	float4 baseColor;
+	float3 diffuseColor;
+	float3 f0;
+	float3 f90;
 	float roughness;
 	float metallic;
 };
@@ -88,31 +88,47 @@ float3 DirectLightBRDF(float3 L, float3 V, float3 N, inout BRDFData BRDF)
 	float LoH = clamp(dot(L, H), 0.0, 1.0);
 	float VoH = clamp(dot(V, H), 0.0, 1.0);
 
-	float3 baseColor_Linear = sRGB_Linear(BRDF.baseColor);
-	BRDF.baseColor = baseColor_Linear;
-	float3 DiffuseColor = (float3(1.0, 1.0, 1.0) - F0_DIELECTRIC.rrr) * (1.0 - BRDF.metallic) * baseColor_Linear;
-	BRDF.DiffuseColor = DiffuseColor;
-
-	float3 F0 = lerp(F0_DIELECTRIC.rrr, baseColor_Linear, BRDF.metallic);
-	BRDF.F0 = F0;
-
-	float reflectance = max(max(F0.r, F0.g), F0.b);
-	// Anything less than 2% is physically impossible and is instead considered to be shadowing. Compare to "Real-Time-Rendering" 4th editon on page 325.
-	float3 F90 = clamp(reflectance * 50.0, 0.0, 1.0) * float3(1.0, 1.0, 1.0);
-	BRDF.F90 = F90;
-
 	float AlphaRoughness = BRDF.roughness * BRDF.roughness;
 
 	if (NoL <= 0.0 && NoV <= 0.0)
 		return float3(0.0, 0.0, 0.0);
 	//float3 DiffuseBRDF = Diffuse_Burley_Disney(DiffuseColor, BRDFData.roughness, NoV, NoL, VoH);
-	float3 DiffuseBRDF = LambertianDiffuse(DiffuseColor);
+	float3 DiffuseBRDF = LambertianDiffuse(BRDF.diffuseColor);
 	
 	float D = NormalDistribution_GGX(NoH, AlphaRoughness);
-	float3 F = SchlickReflection(VoH, F0, F90);
+	float3 F = SchlickReflection(VoH, BRDF.f0, BRDF.f90);
 	float G = SmithGGXVisibilityCorrelated(NoL, NoV, AlphaRoughness);
 	// G项的分子和Cook-Torrance Specular BRDF的分母相消
 	float3 SpecularBRDF = D * F * G;
 	return  (1.0 - F) * DiffuseBRDF + SpecularBRDF;
 }
+
+BRDFData GetBRDF(
+	in Texture2D BaseColorMap,
+	in Texture2D RoughnessMetallicMap,
+	in Texture2D NormalMap,
+	in float2 TexC,
+	in SamplerState LinearWrap,
+	in float4 baseColorFactor,
+	in float roughnessFactor,
+	in float metallicFactor
+)
+{
+	BRDFData BRDF;
+	BRDF.baseColor = BaseColorMap.Sample(LinearWrap, TexC);
+	BRDF.baseColor.rgb = sRGB_Linear(BRDF.baseColor.rgb);
+	BRDF.baseColor = BRDF.baseColor * baseColorFactor;
+
+	float4 roughnessMetallic = RoughnessMetallicMap.Sample(LinearWrap, TexC);
+	BRDF.roughness = saturate(roughnessMetallic.g * roughnessFactor);
+	BRDF.metallic = saturate(roughnessMetallic.b * metallicFactor);
+
+	BRDF.diffuseColor = (float3(1.0, 1.0, 1.0) - F0_DIELECTRIC.rrr) * (1.0 - BRDF.metallic) * BRDF.baseColor.rgb;
+	BRDF.f0 = lerp(F0_DIELECTRIC.rrr, BRDF.baseColor.rgb, BRDF.metallic);
+	float reflectance = max(max(BRDF.f0.r, BRDF.f0.g), BRDF.f0.b);
+	BRDF.f90 = clamp(reflectance * 50.0, 0.0, 1.0) * float3(1.0, 1.0, 1.0);
+
+	return BRDF;
+}
+
 #endif

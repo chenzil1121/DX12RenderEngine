@@ -32,19 +32,23 @@ float3 TransformTangentSpaceNormalGrad(
     in float2 dUV_dx,      // Normal map UV coordinates dx derivative
     in float2 dUV_dy,      // Normal map UV coordinates dy derivative
     in float3 MacroNormal, // Macro normal, must be normalized
-    in float3 TSNormal     // Tangent-space normal
+    in float3 TSNormal,     // Tangent-space normal
+    in bool HasUV
 )
 
 {
     float3 n = MacroNormal;
+    if (HasUV)
+    {
+        float3 t = (dUV_dy.y * dPos_dx - dUV_dx.y * dPos_dy) / (dUV_dx.x * dUV_dy.y - dUV_dy.x * dUV_dx.y);
+        t = normalize(t - n * dot(n, t));
 
-    float3 t = (dUV_dy.y * dPos_dx - dUV_dx.y * dPos_dy) / (dUV_dx.x * dUV_dy.y - dUV_dy.x * dUV_dx.y);
-    t = normalize(t - n * dot(n, t));
+        float3 b = normalize(cross(t, n));
 
-    float3 b = normalize(cross(t, n));
+        float3x3 tbn = float3x3(t, b, n);
+        n = normalize(mul(TSNormal, tbn));
+    }
 
-    float3x3 tbn = float3x3(t, b, n);
-
-    return normalize(mul(TSNormal, tbn));
+    return n;
 }
 #endif

@@ -21,6 +21,8 @@
 #include<queue>
 #include<unordered_set>
 #include<string>
+#include<locale>
+#include<codecvt>
 #include<memory>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
@@ -62,6 +64,13 @@ namespace Utility
     };
 
     uint32_t const DynamicUploadHeapSize = 1 << 20;
+
+    inline std::string WstringToString(std::wstring ws)
+    {
+        //C++17需要自己实现，因为弃用了codecvt类模板
+        static std::wstring_convert<std::codecvt_utf8<wchar_t>>conv;
+        return conv.to_bytes(ws);
+    }
 
     inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(
         const std::wstring& filename,

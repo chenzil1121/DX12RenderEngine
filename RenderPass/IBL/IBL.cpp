@@ -50,7 +50,7 @@ void IBL::PreComputeBRDF()
 	D3D12_CLEAR_VALUE clearColor;
 	clearColor.Format = m_BrdfLookUpTableFmt;
 	memcpy(clearColor.Color, Colors::Black, sizeof(float) * 4);
-	m_BrdfLookUpTable.reset(new Texture(m_pDevice, texDesc, D3D12_RESOURCE_STATE_COMMON, clearColor, L"BrdfLookUpTable"));
+	m_BrdfLookUpTable.reset(new Texture(m_pDevice, texDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, clearColor, L"BrdfLookUpTable"));
 
 	TextureViewerDesc texViewDesc;
 	texViewDesc.TexType = TextureType::Texture2D;
@@ -108,7 +108,6 @@ void IBL::PreComputeBRDF()
 	Context.SetPipelineState(*m_PreBRDFPSO);
 	Context.SetRootSignature(*m_PreBRDFRS);
 	Context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	Context.TransitionResource(m_BrdfLookUpTable.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Context.SetViewportAndScissor(viewport, scissor);
 	Context.SetRenderTargets(1, &texView->GetCpuHandle());
 	Context.Draw(3);
@@ -136,7 +135,7 @@ void IBL::PreComputeCubeMaps()
 	D3D12_CLEAR_VALUE clearColor;
 	clearColor.Format = m_PreIrradianceEnvMapFmt;
 	memcpy(clearColor.Color, Colors::Black, sizeof(float) * 4);
-	m_PreIrradianceEnvMap.reset(new Texture(m_pDevice, texDesc, D3D12_RESOURCE_STATE_COMMON, clearColor, L"PreIrradianceEnvMap"));
+	m_PreIrradianceEnvMap.reset(new Texture(m_pDevice, texDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, clearColor, L"PreIrradianceEnvMap"));
 
 	//Shader
 	ComPtr<ID3DBlob> PreIrradianceEnvMapVsByteCode = nullptr;
@@ -192,7 +191,7 @@ void IBL::PreComputeCubeMaps()
 	texDesc.Format = m_PreFilterEnvMapFmt;
 
 	clearColor.Format = m_PreFilterEnvMapFmt;
-	m_PreFilterEnvMap.reset(new Texture(m_pDevice, texDesc, D3D12_RESOURCE_STATE_COMMON, clearColor, L"PreFilterEnvMap"));
+	m_PreFilterEnvMap.reset(new Texture(m_pDevice, texDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, clearColor, L"PreFilterEnvMap"));
 
 	//Shader
 	ComPtr<ID3DBlob> PreFilterEnvMapVsByteCode = nullptr;
@@ -258,7 +257,6 @@ void IBL::PreComputeCubeMaps()
 	auto HeapInfo = m_EnvMapView->GetHeapInfo();
 	Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
 	Context.SetDescriptorTable(0, m_EnvMapView->GetGpuHandle());
-	Context.TransitionResource(m_PreIrradianceEnvMap.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	int mipLevels = m_PreIrradianceEnvMap->GetDesc().MipLevels;
 	for (size_t mip = 0; mip < mipLevels; mip++)
 	{
@@ -292,13 +290,11 @@ void IBL::PreComputeCubeMaps()
 			Context.Draw(4);
 		}
 	}
-	Context.TransitionResource(m_PreIrradianceEnvMap.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	scissor.right = (LONG)m_PrefilteredEnvMapDim;
 	scissor.bottom = (LONG)m_PrefilteredEnvMapDim;
 	Context.SetPipelineState(*m_PreFilterEnvMapPSO);
 	Context.SetRootSignature(*m_PreFilterEnvMapRS);
-	Context.TransitionResource(m_PreFilterEnvMap.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	mipLevels = m_PreFilterEnvMap->GetDesc().MipLevels;
 	for (size_t mip = 0; mip < mipLevels; mip++)
 	{
@@ -351,6 +347,6 @@ void IBL::CreateTextureView()
 	IBLTexViewDesc[2].NumMipLevels = m_PreFilterEnvMap->GetDesc().MipLevels;
 	std::vector<Texture*> IBLTexs = { m_BrdfLookUpTable.get(),m_PreIrradianceEnvMap.get(),m_PreFilterEnvMap.get() };
 
-	m_IBLTexView.reset(new TextureViewer(m_pDevice, IBLTexs, IBLTexViewDesc.data(), true, IBLTexViewDesc.size()));
+	m_IBLTexView.reset(new TextureViewer(m_pDevice, IBLTexs, IBLTexViewDesc.data(), true));
 }
 

@@ -6,7 +6,8 @@ Texture::Texture(
 	D3D12_RESOURCE_STATES InitialState,
 	D3D12_CLEAR_VALUE& Clear,
 	const wchar_t* Name) :
-	pDevice(Device)
+	pDevice(Device),
+	m_TexName(Name)
 {
 	ASSERT_SUCCEEDED(pDevice->g_Device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -17,6 +18,7 @@ Texture::Texture(
 		IID_PPV_ARGS(m_pResource.GetAddressOf())));
 	SetName(Name);
 	m_ResourceDesc = Desc;
+	m_UsageState = InitialState;
 }
 //绑定了另一个Texture
 Texture::Texture(
@@ -25,7 +27,8 @@ Texture::Texture(
 	D3D12_RESOURCE_STATES InitialState,
 	ID3D12Resource* pResource,
 	const wchar_t* Name) :
-	pDevice(Device)
+	pDevice(Device),
+	m_TexName(Name)
 {
 	m_pResource.Attach(pResource);
 	m_UsageState = InitialState;
@@ -39,7 +42,8 @@ Texture::Texture(
 	const D3D12_SUBRESOURCE_DATA* InitData,
 	ID3D12Resource* pResource,
 	const wchar_t* Name) :
-	pDevice(Device)
+	pDevice(Device),
+	m_TexName(Name)
 {
 	m_pResource.Attach(pResource);
 	m_UsageState = D3D12_RESOURCE_STATE_COPY_DEST;

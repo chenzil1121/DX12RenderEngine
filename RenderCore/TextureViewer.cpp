@@ -10,15 +10,15 @@ TextureViewer::TextureViewer(RenderDevice* Device, Texture* tex, TextureViewerDe
 	CreateView(std::vector<Texture*>{tex}, &ViewerDesc, flag, 1);
 }
 
-TextureViewer::TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool flag, UINT Count) :
+TextureViewer::TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool flag) :
 	pDevice(Device),
 	IsGpuHeap(flag)
 {
-	for (size_t i = 0; i < Count; i++)
+	for (size_t i = 0; i < texs.size(); i++)
 	{
 		m_Desc.push_back(ViewerDescs[i]);
 	}
-	CreateView(texs, ViewerDescs, flag, Count);
+	CreateView(texs, ViewerDescs, flag, texs.size());
 }
 
 

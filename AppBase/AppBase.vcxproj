@@ -156,6 +156,7 @@
     <ClCompile Include="AppBase.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ImGui.cpp" />
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="Model.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -175,6 +176,7 @@
     <ClInclude Include="AppBase.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ImGui.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="Model.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

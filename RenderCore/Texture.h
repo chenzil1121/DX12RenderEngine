@@ -35,6 +35,9 @@ public:
 
 	~Texture() {}
 
+	std::wstring GetName() { return m_TexName; }
+
 private:
 	RenderDevice* pDevice;
+	std::wstring m_TexName;
 };

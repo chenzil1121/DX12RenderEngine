@@ -26,11 +26,10 @@ void CoreTest::CreateResources()
 	m_Camera.LookAt(pos, target, up);
 
 	//Model
-	//m_Model.reset(new Model("..\\Asset\\nanosuit\\nanosuit.obj", &m_Device));
-	m_Model.reset(new Model("..\\Asset\\FlightHelmet\\FlightHelmet.gltf", &m_Device));
-	//m_Model.reset(new Model("..\Asset\\DamagedHelmet\\DamagedHelmet.gltf", &m_Device));
+	//m_Model.reset(new Model("..\\Asset\\FlightHelmet\\FlightHelmet.gltf", &m_Device));
+	m_Model.reset(new Model("..\\Asset\\DamagedHelmet\\DamagedHelmet.gltf", &m_Device));
 	//m_Model.reset(new Model("..\\Asset\\BoomBoxWithAxes\\BoomBoxWithAxes.gltf", &m_Device));
-	//m_Model.reset(new Model("..\\Asset\\MetalRoughSpheresNoTextures\\glTF\\MetalRoughSpheresNoTextures.gltf", &m_Device));
+	//m_Model.reset(new Model("..\\Asset\\MetalRoughSpheresNoTextures\\MetalRoughSpheresNoTextures.gltf", &m_Device));
 
 	m_Model->AddDirectionalLight({ 3.0f, 3.0f, 3.0f }, { m_LightDirection[0], m_LightDirection[1], m_LightDirection[2] });
 	m_Model->m_LightBuffers.reset(new Buffer(&m_Device, m_Model->m_Lights.data(), m_Model->m_Lights.size() * sizeof(Light), true, true));
@@ -55,7 +54,7 @@ void CoreTest::CreateBasePass()
 	BasePassPsByteCode = Utility::CompileShader(L"Shader\\BasePass.hlsl", nullptr, "PS", "ps_5_1");
 
 	//BasePass RootSignature
-	m_BasePassRS.reset(new RootSignature(5, 2));
+	m_BasePassRS.reset(new RootSignature(6, 2));
 	m_BasePassRS->InitStaticSampler(0, Sampler::LinearWrap);
 	m_BasePassRS->InitStaticSampler(1, Sampler::LinearClamp);
 	(*m_BasePassRS)[0].InitAsDescriptorTable(1);
@@ -66,6 +65,7 @@ void CoreTest::CreateBasePass()
 	(*m_BasePassRS)[2].InitAsConstantBuffer(0);
 	(*m_BasePassRS)[3].InitAsConstantBuffer(1);
 	(*m_BasePassRS)[4].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
+	(*m_BasePassRS)[5].InitAsConstantBuffer(2);
 
 	m_BasePassRS->Finalize(L"BasePassRootSignature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, m_Device.g_Device);
 
@@ -131,12 +131,18 @@ void CoreTest::Update(const GameTimer& gt)
 		for (size_t j = 0; j < m_Model->m_Meshes[i].size(); j++)
 		{
 			auto meshWorld = XMLoadFloat4x4(&m_Model->m_Meshes[i][j].m_Constants.World);
+			//Rotation
 			auto mat4 = mat4_cast(m_ModelRotation);
 			auto modelRotation = XMLoadFloat4x4(&XMFLOAT4X4(mat4.m00, mat4.m01, mat4.m02, mat4.m03,
 				mat4.m10, mat4.m11, mat4.m12, mat4.m13,
 				mat4.m20, mat4.m21, mat4.m22, mat4.m23,
 				mat4.m30, mat4.m31, mat4.m32, mat4.m33));
+			//Scale
+			auto modelScale = XMMatrixScaling(100.0f, 100.0f, 100.0f);
+
+			//auto Mat = meshWorld * modelRotation * modelScale;
 			auto Mat = meshWorld * modelRotation;
+
 			auto MatInvertTran = MathHelper::InverseTranspose(Mat);
 			XMFLOAT4X4 finalWorld;
 			XMFLOAT4X4 finalWorldInvertTran;
@@ -251,8 +257,9 @@ void CoreTest::Render(const GameTimer& gt)
 		Context.SetVertexBuffer(0, { mesh.m_VertexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Vertices.size() * sizeof(Vertex)),sizeof(Vertex) });
 		Context.SetIndexBuffer({ mesh.m_IndexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Indices.size() * sizeof(uint16_t)),DXGI_FORMAT_R16_UINT });
 		Context.SetConstantBuffer(2, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
+		Context.SetConstantBuffer(5, m_Model->m_Materials[mesh.m_MatID].m_ConstantsBuffer->GetGpuVirtualAddress());
 		
-		auto FirstTexView = m_Model->m_TextureViewers[mesh.m_TextureInfos[0].id].get();
+		auto FirstTexView = m_Model->m_Materials[mesh.m_MatID].GetTextureView();
 		auto HeapInfo = FirstTexView->GetHeapInfo();
 		Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
 		Context.SetDescriptorTable(0, FirstTexView->GetGpuHandle());
@@ -267,8 +274,9 @@ void CoreTest::Render(const GameTimer& gt)
 		Context.SetVertexBuffer(0, { mesh.m_VertexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Vertices.size() * sizeof(Vertex)),sizeof(Vertex) });
 		Context.SetIndexBuffer({ mesh.m_IndexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Indices.size() * sizeof(uint16_t)),DXGI_FORMAT_R16_UINT });
 		Context.SetConstantBuffer(2, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
+		Context.SetConstantBuffer(5, m_Model->m_Materials[mesh.m_MatID].m_ConstantsBuffer->GetGpuVirtualAddress());
 
-		auto FirstTexView = m_Model->m_TextureViewers[mesh.m_TextureInfos[0].id].get();
+		auto FirstTexView = m_Model->m_Materials[mesh.m_MatID].GetTextureView();
 		auto HeapInfo = FirstTexView->GetHeapInfo();
 		Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
 		Context.SetDescriptorTable(0, FirstTexView->GetGpuHandle());

@@ -53,7 +53,7 @@ class TextureViewer
 {
 public:
 	TextureViewer(RenderDevice* Device, Texture* tex, TextureViewerDesc ViewerDesc, bool flag);
-	TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool flag, UINT Count);
+	TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool flag);
 
 	~TextureViewer()
 	{

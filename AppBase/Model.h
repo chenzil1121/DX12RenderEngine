@@ -3,8 +3,10 @@
 #include<assimp/scene.h>
 #include<assimp/postprocess.h>
 #include<assimp/GltfMaterial.h>
+
 #include"TextureLoader.h"
 #include"Buffer.h"
+#include"Material.h"
 
 enum class LayerType
 {
@@ -40,13 +42,6 @@ struct Vertex
 	XMFLOAT3 Position;
 	XMFLOAT3 Normal;
 	XMFLOAT2 TexCoords;
-};
-
-struct TextureInfo
-{
-	unsigned int id;
-	std::string type;
-	aiString path;
 };
 
 enum class LightType
@@ -88,14 +83,14 @@ class Mesh
 public:
 	std::vector<Vertex>m_Vertices;
 	std::vector<std::uint16_t>m_Indices;
-	std::vector<TextureInfo>m_TextureInfos;
+	size_t m_MatID;
 	std::unique_ptr<Buffer> m_VertexBuffer;
 	std::unique_ptr<Buffer> m_IndexBuffer;
 	std::unique_ptr<Buffer> m_ConstantsBuffer;
 	MeshConstants m_Constants;
 	std::string m_AlphaMode;
 
-	Mesh(std::vector<Vertex> vertices, std::vector<std::uint16_t> indices, std::vector<TextureInfo> textures, XMFLOAT4X4 transformation, std::string alphaMode, RenderDevice* Device);
+	Mesh(std::vector<Vertex> vertices, std::vector<std::uint16_t> indices, size_t MatID, XMFLOAT4X4 transformation, std::string alphaMode, RenderDevice* Device);
 private:
 	void SetupMesh(RenderDevice* Device);
 };
@@ -106,6 +101,7 @@ public:
 	Model(std::string path, RenderDevice* Device)
 	{
 		this->m_pDevice = Device;
+		m_Materials.push_back(std::move(BasePBRMat::DefaulMat(Device)));
 		LoadModel(path);
 	}
 	static XMFLOAT4X4 ConvertMatrix(aiMatrix4x4 matrix)
@@ -140,15 +136,14 @@ public:
 
 	std::array< std::vector<Mesh>, static_cast<size_t>(LayerType::LayerNum)>m_Meshes;
 	std::vector<std::unique_ptr<Texture>>m_Textures;
-	std::vector<std::unique_ptr<TextureViewer>>m_TextureViewers;
+	std::vector<BasePBRMat>m_Materials;
 	std::vector<Light>m_Lights;
 	std::unique_ptr<Buffer>m_LightBuffers;
 private:
 	RenderDevice* m_pDevice;
-	std::vector<TextureInfo>m_TextureInfosLoaded;
 	std::string m_Directory;
 	void LoadModel(std::string path);
 	void ProcessNode(aiNode* node, const aiScene* scene, XMFLOAT4X4 accTransform);
 	void ProcessMesh(aiMesh* mesh, const aiScene* scene, XMFLOAT4X4 transformation);
-	std::vector<TextureInfo> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
+	void LoadMaterial(aiMaterial* mat, bool HasUV);
 };
