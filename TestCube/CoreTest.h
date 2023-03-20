@@ -22,7 +22,7 @@ class CoreTest :public AppBase
 {
 public:
 
-    CoreTest(HINSTANCE hInstance) :AppBase(hInstance)
+    CoreTest(HINSTANCE hInstance, int windowsWidth, int windowsHeight) :AppBase(hInstance, windowsWidth, windowsHeight)
     {
         m_viewport.Width = static_cast<float>(m_Device.g_DisplayWidth);
         m_viewport.Height = static_cast<float>(m_Device.g_DisplayHeight);
@@ -37,11 +37,6 @@ public:
     ~CoreTest()
     {
         m_Device.Free();
-        m_SwapChain.Free();
-        m_VertexBuffer.reset();
-        m_IndexBuffer.reset();
-        m_RootSignature.Free();
-        m_PSO.Free();
 
         //#if _DEBUG
         //        ID3D12DebugDevice* d3dDebug;
@@ -68,9 +63,9 @@ public:
     void OnKeyboardInput(const GameTimer& gt);
 
 
-    SwapChain m_SwapChain;
-    RootSignature m_RootSignature;
-    GraphicsPSO m_PSO;
+    std::unique_ptr<SwapChain> m_SwapChain;
+    std::unique_ptr<RootSignature> m_RootSignature;
+    std::unique_ptr<GraphicsPSO> m_PSO;
     std::unique_ptr<Buffer> m_VertexBuffer;
     std::unique_ptr<Buffer> m_IndexBuffer;
     std::unique_ptr<Buffer> m_ObjConstantBuffer;

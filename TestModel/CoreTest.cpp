@@ -27,9 +27,9 @@ void CoreTest::CreateResources()
 
 	//Model
 	//m_Model.reset(new Model("..\\Asset\\FlightHelmet\\FlightHelmet.gltf", &m_Device));
-	m_Model.reset(new Model("..\\Asset\\DamagedHelmet\\DamagedHelmet.gltf", &m_Device));
+	//m_Model.reset(new Model("..\\Asset\\DamagedHelmet\\DamagedHelmet.gltf", &m_Device));
 	//m_Model.reset(new Model("..\\Asset\\BoomBoxWithAxes\\BoomBoxWithAxes.gltf", &m_Device));
-	//m_Model.reset(new Model("..\\Asset\\MetalRoughSpheresNoTextures\\MetalRoughSpheresNoTextures.gltf", &m_Device));
+	m_Model.reset(new Model("..\\Asset\\MetalRoughSpheresNoTextures\\MetalRoughSpheresNoTextures.gltf", &m_Device));
 
 	m_Model->AddDirectionalLight({ 3.0f, 3.0f, 3.0f }, { m_LightDirection[0], m_LightDirection[1], m_LightDirection[2] });
 	m_Model->m_LightBuffers.reset(new Buffer(&m_Device, m_Model->m_Lights.data(), m_Model->m_Lights.size() * sizeof(Light), true, true));
@@ -140,8 +140,8 @@ void CoreTest::Update(const GameTimer& gt)
 			//Scale
 			auto modelScale = XMMatrixScaling(100.0f, 100.0f, 100.0f);
 
-			//auto Mat = meshWorld * modelRotation * modelScale;
-			auto Mat = meshWorld * modelRotation;
+			auto Mat = meshWorld * modelRotation * modelScale;
+			//auto Mat = meshWorld * modelRotation;
 
 			auto MatInvertTran = MathHelper::InverseTranspose(Mat);
 			XMFLOAT4X4 finalWorld;
