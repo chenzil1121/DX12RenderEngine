@@ -60,20 +60,32 @@ void RootSignature::Finalize(const std::wstring& name, D3D12_ROOT_SIGNATURE_FLAG
 
     ASSERT(m_NumInitializedStaticSamplers == m_NumSamplers);
 
-    D3D12_ROOT_SIGNATURE_DESC RootDesc;
+    D3D12_ROOT_SIGNATURE_DESC1 RootDesc;
     RootDesc.NumParameters = m_NumParameters;
     RootDesc.NumStaticSamplers = m_NumSamplers;
-    RootDesc.pParameters = reinterpret_cast<const D3D12_ROOT_PARAMETER*>(m_ParamArray.get());
+    RootDesc.pParameters = reinterpret_cast<const D3D12_ROOT_PARAMETER1*>(m_ParamArray.get());
     RootDesc.pStaticSamplers = const_cast<const D3D12_STATIC_SAMPLER_DESC*>(m_SamplerArray.get());
     RootDesc.Flags = Flags;
 
+    D3D12_VERSIONED_ROOT_SIGNATURE_DESC versionedDesc = { };
+    versionedDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    versionedDesc.Desc_1_1 = RootDesc;
+
     Microsoft::WRL::ComPtr<ID3DBlob>pOutBlob, pErrorBlob;
 
-    ASSERT_SUCCEEDED(D3D12SerializeRootSignature(&RootDesc, D3D_ROOT_SIGNATURE_VERSION_1, 
-        pOutBlob.GetAddressOf(), pErrorBlob.GetAddressOf()), (char*)pErrorBlob->GetBufferPointer());
+    if (FAILED(D3D12SerializeVersionedRootSignature(&versionedDesc, pOutBlob.GetAddressOf(), pErrorBlob.GetAddressOf())))
+    {
+        const char* errString = pErrorBlob ? reinterpret_cast<const char*>(pErrorBlob->GetBufferPointer()) : "";
+
+        ASSERT(false, "Failed to create root signature: %s", errString);
+    }
+
+    /*ASSERT_SUCCEEDED(D3D12SerializeRootSignature(&RootDesc, D3D_ROOT_SIGNATURE_VERSION_1, 
+        pOutBlob.GetAddressOf(), pErrorBlob.GetAddressOf()), (char*)pErrorBlob->GetBufferPointer());*/
     ASSERT_SUCCEEDED(pDevice->CreateRootSignature(0, pOutBlob->GetBufferPointer(), pOutBlob->GetBufferSize(),
         IID_PPV_ARGS(&m_Signature)));
 
+    m_Signature->SetName(name.c_str());
     m_Finalized = TRUE;
 }
 

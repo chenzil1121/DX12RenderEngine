@@ -10,10 +10,13 @@
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
     <Filter Include="imgui">
-      <UniqueIdentifier>{48330e64-d0c8-4094-9cf4-fe62291d2a6c}</UniqueIdentifier>
+      <UniqueIdentifier>{f4286aa5-e26b-4858-a488-30ef78c96772}</UniqueIdentifier>
     </Filter>
-    <Filter Include="imgui\imGUIZMO.quat">
-      <UniqueIdentifier>{30f04d1c-0024-4678-b83d-0d5d247a50c3}</UniqueIdentifier>
+    <Filter Include="imgui\imGuIZMO.quat">
+      <UniqueIdentifier>{991643d7-4ce0-49ee-8da5-2fd888e9a635}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RenderPass">
+      <UniqueIdentifier>{92c027dc-d73b-493c-b8eb-d2b4f9691e2a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -23,13 +26,19 @@
     <ClCompile Include="Camera.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Model.cpp">
+    <ClCompile Include="Scene.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ImGui.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\ThirdParty\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ThirdParty\imgui\imgui_demo.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\ThirdParty\imgui\imgui_draw.cpp">
@@ -47,27 +56,39 @@
     <ClCompile Include="..\ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\ThirdParty\imgui\imgui_demo.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
     <ClCompile Include="..\ThirdParty\imgui\imGuIZMO.quat\imGuIZMOquat.cpp">
-      <Filter>imgui\imGUIZMO.quat</Filter>
+      <Filter>imgui\imGuIZMO.quat</Filter>
     </ClCompile>
-    <ClCompile Include="Material.cpp">
+    <ClCompile Include="..\RenderPass\EnvMap.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RenderPass\IBL.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RenderPass\BasePass.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureLoader.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RenderPass\FXAA.cpp">
+      <Filter>RenderPass</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Model.h">
+    <ClInclude Include="Scene.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ImGui.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\ThirdParty\imgui\imconfig.h">
@@ -95,22 +116,34 @@
       <Filter>imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\imGuIZMOquat.h">
-      <Filter>imgui\imGUIZMO.quat</Filter>
+      <Filter>imgui\imGuIZMO.quat</Filter>
     </ClInclude>
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\vgConfig.h">
-      <Filter>imgui\imGUIZMO.quat</Filter>
+      <Filter>imgui\imGuIZMO.quat</Filter>
     </ClInclude>
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\vGizmo.h">
-      <Filter>imgui\imGUIZMO.quat</Filter>
+      <Filter>imgui\imGuIZMO.quat</Filter>
     </ClInclude>
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\vGizmoMath.h">
-      <Filter>imgui\imGUIZMO.quat</Filter>
+      <Filter>imgui\imGuIZMO.quat</Filter>
     </ClInclude>
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\vgMath.h">
-      <Filter>imgui\imGUIZMO.quat</Filter>
+      <Filter>imgui\imGuIZMO.quat</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h">
+    <ClInclude Include="..\RenderPass\EnvMap.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\IBL.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\BasePass.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureLoader.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\FXAA.h">
+      <Filter>RenderPass</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

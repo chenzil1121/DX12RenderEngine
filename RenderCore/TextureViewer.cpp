@@ -1,26 +1,27 @@
 #include"TextureViewer.h"
 
-TextureViewer::TextureViewer(RenderDevice* Device, Texture* tex, TextureViewerDesc ViewerDesc, bool flag) :
+TextureViewer::TextureViewer(RenderDevice* Device, Texture* tex, TextureViewerDesc ViewerDesc, bool GpuHeapflag) :
 	pDevice(Device),
-	IsGpuHeap(flag)
+	IsGpuHeap(GpuHeapflag)
 {
 	if (ViewerDesc.Format == DXGI_FORMAT_UNKNOWN)
 		ViewerDesc.Format = tex->GetDesc().Format;
 	m_Desc.push_back(ViewerDesc);
-	CreateView(std::vector<Texture*>{tex}, &ViewerDesc, flag, 1);
+	CreateView(std::vector<Texture*>{tex}, &ViewerDesc, GpuHeapflag, 1);
 }
 
-TextureViewer::TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool flag) :
+TextureViewer::TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool GpuHeapflag) :
 	pDevice(Device),
-	IsGpuHeap(flag)
+	IsGpuHeap(GpuHeapflag)
 {
 	for (size_t i = 0; i < texs.size(); i++)
 	{
+		if (ViewerDescs[i].Format == DXGI_FORMAT_UNKNOWN)
+			ViewerDescs[i].Format = texs[i]->GetDesc().Format;
 		m_Desc.push_back(ViewerDescs[i]);
 	}
-	CreateView(texs, ViewerDescs, flag, texs.size());
+	CreateView(texs, ViewerDescs, GpuHeapflag, texs.size());
 }
-
 
 void TextureViewer::CreateView(std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool flag, UINT Count)
 {
@@ -188,5 +189,22 @@ void TextureViewer::CreateSRV(Texture* tex, TextureViewerDesc ViewerDesc, UINT O
 void TextureViewer::CreateUAV(Texture* tex, TextureViewerDesc ViewerDesc, UINT Offset)
 {
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = ViewerDesc.Format;
+
+	switch (ViewerDesc.TexType)
+	{
+	case TextureType::Texture2D:
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D.MipSlice = ViewerDesc.MostDetailedMip;
+		break;
+	case TextureType::Texture2DArray:
+		
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+		uavDesc.Texture2DArray.ArraySize = ViewerDesc.NumArraySlices;
+		uavDesc.Texture2DArray.FirstArraySlice = ViewerDesc.FirstArraySlice;
+		uavDesc.Texture2DArray.MipSlice = ViewerDesc.MostDetailedMip;
+		break;
+	}
+	pDevice->g_Device->CreateUnorderedAccessView(tex->GetResource(), nullptr, &uavDesc, m_Viewer.GetCpuHandle(Offset));
 }
 

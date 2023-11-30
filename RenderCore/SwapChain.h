@@ -8,7 +8,13 @@
 class SwapChain
 {
 public:
-    SwapChain(HWND hWnd, RenderDevice* Device) { Create(hWnd, Device); }
+    SwapChain(HWND hWnd, RenderDevice* Device, unsigned int MSAACount = 4, unsigned int MSAAQuality = DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN):
+        MSAACount(MSAACount),
+        MSAAQuality(MSAAQuality),
+        pDevice(Device)
+    { 
+        Create(hWnd); 
+    }
     ~SwapChain() { Free(); }
 
     void Free() 
@@ -23,7 +29,7 @@ public:
         m_SwapChain = nullptr;
     }
 
-    void Create(HWND hWnd, RenderDevice* Device);
+    void Create(HWND hWnd);
 
     void Resize();
 
@@ -45,7 +51,9 @@ public:
     unsigned int GetMSAAQuality() { return MSAAQuality; }
 
     GpuResource* GetBackBuffer() { return m_BackBuffer[m_CurrentBuffer].get(); }
+    D3D12_RESOURCE_DESC GetBackBufferDesc() { return m_BackBuffer[m_CurrentBuffer]->GetDesc(); }
     GpuResource* GetDepthBuffer() { return m_DepthStencilBuffer.get(); }
+    D3D12_RESOURCE_DESC GetDepthBufferDesc() { return m_DepthStencilBuffer->GetDesc(); }
 
     GpuResource* GetmsaaRenderTarget() { return m_msaaRenderTarget.get(); }
     GpuResource* GetmsaaDepthStencil() { return m_msaaDepthStencil.get(); }
@@ -78,13 +86,10 @@ private:
     //交换链创建的BackBuffer没有SRGB，但View是SRGB
     DXGI_FORMAT m_BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
     DXGI_FORMAT m_BackBufferSRGBFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    DXGI_FORMAT m_DepthStencilFormat = DXGI_FORMAT_D32_FLOAT;
+    DXGI_FORMAT m_DepthStencilFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
     unsigned int MSAACount = 4;
     unsigned int MSAAQuality = DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN;
-
-    //unsigned int MSAACount = 1;
-    //unsigned int MSAAQuality = 0;
 
     UINT m_CurrentBuffer = 0;
 };

@@ -20,6 +20,25 @@ Texture::Texture(
 	m_ResourceDesc = Desc;
 	m_UsageState = InitialState;
 }
+Texture::Texture(
+	RenderDevice* Device,
+	D3D12_RESOURCE_DESC& Desc,
+	D3D12_RESOURCE_STATES InitialState,
+	const wchar_t* Name):
+	pDevice(Device),
+	m_TexName(Name)
+{
+	ASSERT_SUCCEEDED(pDevice->g_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&Desc,
+		InitialState,
+		nullptr,
+		IID_PPV_ARGS(m_pResource.GetAddressOf())));
+	SetName(Name);
+	m_ResourceDesc = Desc;
+	m_UsageState = InitialState;
+}
 //绑定了另一个Texture
 Texture::Texture(
 	RenderDevice* Device,
@@ -65,6 +84,6 @@ Texture::Texture(
 	
 	GraphicsContext& Context = pDevice->BeginGraphicsContext(L"Texture Upload");
 	UpdateSubresources(Context.GetCommandList(), m_pResource.Get(), textureUploadHeap.Get(), 0, 0, num2DSubresources, InitData);
-	Context.TransitionResource(this, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Context.TransitionResource(this, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Context.Finish(true);
 }

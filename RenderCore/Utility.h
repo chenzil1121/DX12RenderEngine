@@ -11,32 +11,52 @@
 
 #include<wrl/client.h>
 #include<iostream>
+#include<fstream>
+#include<comdef.h>
 #include<stdint.h>
+#include<initguid.h>
 #include<d3d12.h>
-#include <DirectXColors.h>
+#include<DirectXColors.h>
 #include<dxgi.h>
 #include<D3Dcompiler.h>
 #include<vector>
+#include<unordered_map>
 #include<array>
 #include<queue>
 #include<unordered_set>
 #include<string>
+#include<sstream>
 #include<locale>
 #include<codecvt>
 #include<memory>
-#include <DirectXMath.h>
-#include <DirectXPackedVector.h>
-#include <DirectXColors.h>
+#include<DirectXMath.h>
+#include<DirectXPackedVector.h>
+#include<DirectXColors.h>
+#include<dxgi1_6.h>
+#ifdef _DEBUG
+#include<dxgidebug.h>
+#endif
 #include"d3dx12.h"
+#include"../ThirdParty/DXC/dxcapi.use.h"
+
+#pragma comment(lib, "d3d12.lib") 
+#pragma comment(lib, "dxgi.lib") 
+#pragma comment(lib,"d3dcompiler.lib")
+
 
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
+#define SizeOfInUint32(obj) ((sizeof(obj) - 1) / sizeof(UINT32) + 1)
+
 using namespace DirectX;
 using namespace DirectX::PackedVector;
+using Microsoft::WRL::ComPtr;
 
 namespace Utility
 {
+    static dxc::DxcDllSupport g_DxcDllHelper;
+
     uint32_t const CPUDescriptorHeapSize[4]
     {
         8192,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
@@ -65,11 +85,26 @@ namespace Utility
 
     uint32_t const DynamicUploadHeapSize = 1 << 20;
 
+    // Align to a certain value of power of 2.
+    inline constexpr UINT Align(UINT size, UINT alignment)
+    {
+        return (size + (alignment - 1)) & ~(alignment - 1);
+    }
+
     inline std::string WstringToString(std::wstring ws)
     {
         //C++17需要自己实现，因为弃用了codecvt类模板
         static std::wstring_convert<std::codecvt_utf8<wchar_t>>conv;
         return conv.to_bytes(ws);
+    }
+
+    inline std::unique_ptr<char[]> WcharToChar(const wchar_t* wc)
+    {
+        size_t len = wcslen(wc) + 1;
+        char* c = new char[len];
+        size_t converted = 0;
+        wcstombs_s(&converted, c, len, wc, _TRUNCATE);
+        return std::unique_ptr<char[]>(c);
     }
 
     inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(
@@ -94,6 +129,84 @@ namespace Utility
         if (errors != nullptr)
             OutputDebugStringA((char*)errors->GetBufferPointer());
 
+        return byteCode;
+    }
+
+    inline Microsoft::WRL::ComPtr<IDxcBlob> CompileLibrary(
+        const WCHAR* filename,
+        const WCHAR* target
+    )
+    {
+        // Initialize the helper
+        Microsoft::WRL::ComPtr<IDxcCompiler>pCompiler;
+        Microsoft::WRL::ComPtr<IDxcLibrary>pLibrary;
+        Microsoft::WRL::ComPtr<IDxcBlobEncoding>pTextBlob; 
+        Microsoft::WRL::ComPtr<IDxcOperationResult>pResult;
+        if (FAILED(g_DxcDllHelper.InitializeForDll(L"../ThirdParty/DXC/dxcompiler.dll", L"../ThirdParty/DXC/dxil.dll", "DxcCreateInstance")))
+        {
+            OutputDebugStringA("DXC Init Fail\n");
+            __debugbreak();
+        }
+        if (FAILED(g_DxcDllHelper.CreateInstance(CLSID_DxcCompiler, pCompiler.GetAddressOf())))
+        {
+            OutputDebugStringA("Create IDxcCompiler Fail\n");
+            __debugbreak();
+        }
+        if (FAILED(g_DxcDllHelper.CreateInstance(CLSID_DxcLibrary, pLibrary.GetAddressOf())))
+        {
+            OutputDebugStringA("Create IDxcLibrary Fail\n");
+            __debugbreak();
+        }
+
+        // Open and read the file
+        std::ifstream shaderFile(filename);
+        if (shaderFile.good() == false)
+        {
+            OutputDebugStringW(std::wstring(L"Can't open file " + std::wstring(filename) + L"\n").c_str());
+            __debugbreak();
+            return nullptr;
+        }
+        std::stringstream strStream;
+        strStream << shaderFile.rdbuf();
+        std::string shader = strStream.str();
+
+        // Create blob from the string
+        if(FAILED(pLibrary->CreateBlobWithEncodingFromPinned((LPBYTE)shader.c_str(), (uint32_t)shader.size(), 0, pTextBlob.GetAddressOf())))
+        {
+            OutputDebugStringA("Create IDxcBlobEncoding Fail\n");
+            __debugbreak();
+        }
+
+        // Compile
+        if (FAILED(pCompiler->Compile(pTextBlob.Get(), filename, L"", target, nullptr, 0, nullptr, 0, nullptr, pResult.GetAddressOf())))
+        {
+            OutputDebugStringA("Compile Fail\n");
+        }
+
+        // Verify the result
+        HRESULT resultCode;
+        pResult->GetStatus(&resultCode);
+        if (FAILED(resultCode))
+        {
+            Microsoft::WRL::ComPtr<IDxcBlobEncoding> pError;
+            pResult->GetErrorBuffer(pError.GetAddressOf());
+
+            std::vector<char> infoLog(pError->GetBufferSize() + 1);
+            memcpy(infoLog.data(), pError->GetBufferPointer(), pError->GetBufferSize());
+            infoLog[pError->GetBufferSize()] = 0;
+            std::string log(infoLog.data());
+
+            OutputDebugStringA(std::string("ERROR :" + log + "\n").c_str());
+            return nullptr;
+        }
+
+        Microsoft::WRL::ComPtr<IDxcBlob> byteCode = nullptr;
+        if (FAILED(pResult->GetResult(&byteCode)))
+        {
+            OutputDebugStringA("Can't GetResult\n");
+            __debugbreak();
+            return nullptr;
+        }
         return byteCode;
     }
 

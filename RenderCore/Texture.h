@@ -19,6 +19,12 @@ public:
 	);
 	Texture(
 		RenderDevice* Device,
+		D3D12_RESOURCE_DESC& Desc,
+		D3D12_RESOURCE_STATES InitialState,
+		const wchar_t* Name
+	);
+	Texture(
+		RenderDevice* Device,
 		D3D12_RESOURCE_DESC & Desc,
 		D3D12_RESOURCE_STATES InitialState,
 		ID3D12Resource* pResource,

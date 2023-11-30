@@ -8,7 +8,9 @@
 
 #include <Windows.h>
 #include <DirectXMath.h>
+#include <DirectXCollision.h>
 #include <cstdint>
+#include <cmath>
 
 class MathHelper
 {
@@ -128,6 +130,12 @@ public:
 			0.0f, 0.0f, 0.0f, 1.0f);
 
 		return XMLoadFloat4x4(&I);
+	}
+
+	static double Length(DirectX::XMFLOAT3 v)
+	{
+		double length = v.x * v.x + v.y * v.y + v.z * v.z;
+		return sqrt(length);
 	}
 
     static DirectX::XMVECTOR RandUnitVec3();

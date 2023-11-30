@@ -18,7 +18,14 @@ BasePBRMat::BasePBRMat(RenderDevice* pDeivce, std::string Name, std::vector<Text
 	}
 
 	m_TexView.reset(new TextureViewer(pDeivce, pTexs, texViewDescs.data(), true));
-	UINT size = sizeof(PBRParameter);
+
+	GraphicsContext& Context = pDeivce->BeginGraphicsContext(L"Init PBRTexture State");
+	for (int i = 0; i < 3; i++)
+	{
+		Context.TransitionResource(pTexs[i], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+	Context.Finish(true);
+
 	m_ConstantsBuffer.reset(new Buffer(pDeivce, &m_Parameter, (UINT)(sizeof(PBRParameter)), false, true));
 }
 
@@ -33,8 +40,8 @@ BasePBRMat BasePBRMat::DefaulMat(RenderDevice* pDeivce)
 	D3D12_RESOURCE_DESC texDesc;
 	texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	texDesc.Alignment = 0;
-	texDesc.Width = 10;
-	texDesc.Height = 10;
+	texDesc.Width = 1;
+	texDesc.Height = 1;
 	texDesc.DepthOrArraySize = 1;
 	texDesc.MipLevels = 1;
 	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -61,6 +68,7 @@ BasePBRMat BasePBRMat::DefaulMat(RenderDevice* pDeivce)
 		GraphicsContext& Context = pDeivce->BeginGraphicsContext(L"Init DefaultBaseColorTex");
 		Context.SetRenderTargets(1, &view->GetCpuHandle());
 		Context.ClearRenderTarget(view->GetCpuHandle(), clearColor.Color, nullptr);
+		Context.TransitionResource(DefaultBaseColorTex.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		Context.Finish();
 	}
 	if (!DefaultRoughnessMetallicTex)
@@ -81,6 +89,7 @@ BasePBRMat BasePBRMat::DefaulMat(RenderDevice* pDeivce)
 		GraphicsContext& Context = pDeivce->BeginGraphicsContext(L"Init DefaultRoughnessMetallicTex");
 		Context.SetRenderTargets(1, &view->GetCpuHandle());
 		Context.ClearRenderTarget(view->GetCpuHandle(), clearColor.Color, nullptr);
+		Context.TransitionResource(DefaultRoughnessMetallicTex.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		Context.Finish();
 	}
 	if (!DefaultNormalTex)
@@ -101,6 +110,7 @@ BasePBRMat BasePBRMat::DefaulMat(RenderDevice* pDeivce)
 		GraphicsContext& Context = pDeivce->BeginGraphicsContext(L"Init DefaultNormalTex");
 		Context.SetRenderTargets(1, &view->GetCpuHandle());
 		Context.ClearRenderTarget(view->GetCpuHandle(), clearColor.Color, nullptr);
+		Context.TransitionResource(DefaultNormalTex.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		Context.Finish(true);
 	}
 

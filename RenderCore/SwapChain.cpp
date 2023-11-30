@@ -1,9 +1,8 @@
 ﻿#include "SwapChain.h"
 
-void SwapChain::Create(HWND hWnd, RenderDevice* Device)
+void SwapChain::Create(HWND hWnd)
 {
     m_SwapChain.Reset();
-    pDevice = Device;
 
     Microsoft::WRL::ComPtr<IDXGIFactory4> mdxgiFactory;
     ASSERT_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&mdxgiFactory)));

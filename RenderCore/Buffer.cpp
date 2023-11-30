@@ -1,17 +1,17 @@
 #include "Buffer.h"
 
-Buffer::Buffer(RenderDevice* Device, const void* initData, UINT64 byteSize, bool IsDynamic, bool IsConstant):
+Buffer::Buffer(RenderDevice* Device, const void* InitData, UINT64 ByteSize, bool IsDynamic, bool IsConstant, const wchar_t* Name, D3D12_RESOURCE_FLAGS Flags, D3D12_RESOURCE_STATES InitState):
 	pDevice(Device),
 	m_DynamicFlag(IsDynamic)
 {
-	m_ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
+	m_ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(ByteSize, Flags);
 
 	if (!m_DynamicFlag)
 	{
 		if (IsConstant)
 		{
-			UINT64 AlignSize = byteSize % 256 == 0 ? 0 : 256 - byteSize % 256;
-			AlignSize = byteSize + AlignSize;
+			UINT64 AlignSize = ByteSize % 256 == 0 ? 0 : 256 - ByteSize % 256;
+			AlignSize = ByteSize + AlignSize;
 			m_ResourceDesc.Width = AlignSize;
 		}
 
@@ -19,11 +19,18 @@ Buffer::Buffer(RenderDevice* Device, const void* initData, UINT64 byteSize, bool
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&m_ResourceDesc,
-			D3D12_RESOURCE_STATE_COMMON,
+			InitState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS ? D3D12_RESOURCE_STATE_COMMON : InitState,
 			nullptr,
 			IID_PPV_ARGS(m_pResource.GetAddressOf())));
 
-		if (initData)
+		if (InitState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		{
+			GraphicsContext& Context = pDevice->BeginGraphicsContext(L"UAV_STATE");
+			Context.TransitionResource(this, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			Context.Finish(true);
+		}
+
+		if (InitData)
 		{
 			GpuResource UploadBuffer;
 
@@ -38,38 +45,19 @@ Buffer::Buffer(RenderDevice* Device, const void* initData, UINT64 byteSize, bool
 			void* DestAddres = nullptr;
 
 			ASSERT_SUCCEEDED(UploadBuffer->Map(0, nullptr, &DestAddres));
-			memcpy(DestAddres, initData, static_cast<size_t>(byteSize));
+			memcpy(DestAddres, InitData, static_cast<size_t>(ByteSize));
 			UploadBuffer->Unmap(0, nullptr);
 
 			GraphicsContext& Context = pDevice->BeginGraphicsContext(L"InitBuffer");
-			Context.TransitionResource(this, D3D12_RESOURCE_STATE_COPY_DEST, true);
+			Context.TransitionResource(this, D3D12_RESOURCE_STATE_COPY_DEST);
 			Context.CopyResource(this, &UploadBuffer);
 			Context.TransitionResource(this, D3D12_RESOURCE_STATE_GENERIC_READ);
 			Context.Finish(true);
 		}
+		SetName(Name);
 	}
 	else
 	{
-		m_DynamicAlloc = pDevice->AllocateDynamicResouorce(byteSize, IsConstant);
-	}
-
-}
-
-void Buffer::CreateCBV()
-{
-	m_CBV = pDevice->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
-	if (!m_DynamicFlag)
-	{
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-		cbvDesc.SizeInBytes = m_ResourceDesc.Width;
-		cbvDesc.BufferLocation = GetGpuVirtualAddress();
-		pDevice->g_Device->CreateConstantBufferView(&cbvDesc, m_CBV.GetCpuHandle(0));
-	}
-	else
-	{
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-		cbvDesc.SizeInBytes = m_DynamicAlloc.Size;
-		cbvDesc.BufferLocation = m_DynamicAlloc.GPUAddress;
-		pDevice->g_Device->CreateConstantBufferView(&cbvDesc, m_CBV.GetCpuHandle(0));
+		m_DynamicAlloc = pDevice->AllocateDynamicResouorce(ByteSize, IsConstant);
 	}
 }

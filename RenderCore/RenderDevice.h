@@ -1,23 +1,18 @@
 #pragma once
-#include <dxgi1_6.h>
-#ifdef _DEBUG
-#include <dxgidebug.h>
-#endif
-
-#pragma comment(lib, "d3d12.lib") 
-#pragma comment(lib, "dxgi.lib") 
-#pragma comment(lib,"d3dcompiler.lib")
+//#include <dxgi1_6.h>
+//#ifdef _DEBUG
+//#include <dxgidebug.h>
+//#endif
+//
+//#pragma comment(lib, "d3d12.lib") 
+//#pragma comment(lib, "dxgi.lib") 
+//#pragma comment(lib,"d3dcompiler.lib")
 
 #include"Utility.h"
 #include"CommandContext.h"
 #include"CommandListManager.h"
 #include"DescriptorHeap.h"
 #include"DynamicUploadHeap.h"
-/*
-* ID3D12Device* g_Device = nullptr;
-* 头文件中这样写，会声明并定义这个命名空间中的变量，当头文件被引用几次，变量就被定义几次，带来重定义错误
-* 使用extern关键字在.h文件中只声明同时可以让其他.cpp文件访问命名空间中的全局变量
-*/
 
 class CommandListManager;
 class CommandContext;
@@ -41,6 +36,7 @@ public:
 	RenderDevice& operator = (RenderDevice&&) = delete;
 
 	GraphicsContext& BeginGraphicsContext(const std::wstring ID = L"");
+	ComputeContext& BeginComputeContext(const std::wstring ID = L"");
 
 	DescriptorHeapAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
 	DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
@@ -53,7 +49,7 @@ public:
 
 
 public:
-	ID3D12Device* g_Device;
+	ID3D12Device5* g_Device;
 	CommandListManager g_CommandManager;
 	ContextManager g_ContextManager;
 

@@ -9,6 +9,8 @@
 *.user
 *.userosscache
 *.sln.docstates
+Asset/Bistro/*
+Asset/Sponza_new/*
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

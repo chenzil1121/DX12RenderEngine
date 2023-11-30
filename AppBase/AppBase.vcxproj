@@ -47,7 +47,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -84,6 +84,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(ProjectDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)Intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -119,7 +121,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)RenderCore;$(SolutionDir)ThirdParty/imgui;$(SolutionDir)ThirdParty/imgui/imGuIZMO.quat</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)RenderCore;$(SolutionDir)ThirdParty/imgui;$(SolutionDir)ThirdParty/imgui/imGuIZMO.quat;$(SolutionDir)RenderPass;$(SolutionDir)AppBase;$(SolutionDir)packages/directxtk12_desktop_2019.2023.4.28.1/include;$(SolutionDir)packages/directxtex_desktop_win10.2023.6.14.1/include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,7 +137,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)RenderCore;$(SolutionDir)ThirdParty/imgui;$(SolutionDir)ThirdParty/imgui/imGuIZMO.quat;$(SolutionDir)RenderPass;$(SolutionDir)AppBase;$(SolutionDir)packages/directxtk12_desktop_2019.2023.4.28.1/include;$(SolutionDir)packages/directxtex_desktop_win10.2023.6.14.1/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,6 +148,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\RenderPass\BasePass.cpp" />
+    <ClCompile Include="..\RenderPass\EnvMap.cpp" />
+    <ClCompile Include="..\RenderPass\FXAA.cpp" />
+    <ClCompile Include="..\RenderPass\IBL.cpp" />
     <ClCompile Include="..\ThirdParty\imgui\imgui.cpp" />
     <ClCompile Include="..\ThirdParty\imgui\imGuIZMO.quat\imGuIZMOquat.cpp" />
     <ClCompile Include="..\ThirdParty\imgui\imgui_demo.cpp" />
@@ -157,9 +164,14 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ImGui.cpp" />
     <ClCompile Include="Material.cpp" />
-    <ClCompile Include="Model.cpp" />
+    <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="TextureLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\RenderPass\BasePass.h" />
+    <ClInclude Include="..\RenderPass\EnvMap.h" />
+    <ClInclude Include="..\RenderPass\FXAA.h" />
+    <ClInclude Include="..\RenderPass\IBL.h" />
     <ClInclude Include="..\ThirdParty\imgui\imconfig.h" />
     <ClInclude Include="..\ThirdParty\imgui\imgui.h" />
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\imGuIZMOquat.h" />
@@ -177,9 +189,9 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ImGui.h" />
     <ClInclude Include="Material.h" />
-    <ClInclude Include="Model.h" />
+    <ClInclude Include="Scene.h" />
+    <ClInclude Include="TextureLoader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

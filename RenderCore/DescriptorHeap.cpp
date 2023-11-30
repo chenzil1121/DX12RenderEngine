@@ -52,10 +52,14 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
 	CpuHandle.ptr += Allocation.Offset * m_DescriptorSize;
 
 	auto GpuHandle = m_FirstGPUHandle;
+	UINT64 GpuHandleOffsetInHeap = -1;
 	if (m_FirstGPUHandle.ptr != 0)
+	{
+		GpuHandleOffsetInHeap = UINT64(Allocation.Offset);
 		GpuHandle.ptr += UINT64(Allocation.Offset) * UINT64(m_DescriptorSize);
+	}
 
-	return DescriptorHeapAllocation(&m_ParentAllocator, m_pDescriptorHeap.Get(), CpuHandle, GpuHandle, Allocation.Size, m_ManagerId);
+	return DescriptorHeapAllocation(&m_ParentAllocator, m_pDescriptorHeap.Get(), CpuHandle, GpuHandle, GpuHandleOffsetInHeap, Allocation.Size, m_ManagerId);
 }
 
 void DescriptorHeapAllocationManager::FreeAllocation(DescriptorHeapAllocation&& Allocation, uint64_t FenceValue)
@@ -172,12 +176,13 @@ DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(uint32_t Count)
 		m_Suballocations.emplace_back(std::move(Chunk));
 		m_CurrentSuballocationOffset = 0;
 	}
-
+	ASSERT(false,"Not test this Dynamic Allocate, maybe Conflict with bindless!!!")
 	auto& CurrentSuballocation = m_Suballocations.back();
 	DescriptorHeapAllocation Allocation(this,
 		CurrentSuballocation.GetDescriptorHeap(),
 		CurrentSuballocation.GetCpuHandle(m_CurrentSuballocationOffset),
 		CurrentSuballocation.GetGpuHandle(m_CurrentSuballocationOffset),
+		-1,
 		Count,
 		CurrentSuballocation.GetAllocationManagerId());
 

@@ -19,15 +19,14 @@ public:
 		const void* InitData,
 		UINT64 ByteSize,
 		bool IsDynamic,
-		bool IsConstant
-		); 
+		bool IsConstant,
+		const wchar_t* Name = L"",
+		D3D12_RESOURCE_FLAGS Flags = D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATES InitState = D3D12_RESOURCE_STATE_COMMON
+	);
 	~Buffer()
 	{
-		if (!m_CBV.IsNull())
-			pDevice->FreeCPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_COMMAND_LIST_TYPE_DIRECT, std::move(m_CBV));
 	}
-	
-	void CreateCBV();
 
 	void Upload(const void* UploadData)
 	{
@@ -45,13 +44,9 @@ public:
 			return m_DynamicAlloc.GPUAddress;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCBV() { return m_CBV.GetCpuHandle(0); }
-
 private:
 	RenderDevice* pDevice;
 
 	bool m_DynamicFlag;
 	DynamicAllocation m_DynamicAlloc;
-
-	DescriptorHeapAllocation m_CBV;
 };

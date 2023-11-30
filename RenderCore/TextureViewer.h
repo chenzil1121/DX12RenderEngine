@@ -52,8 +52,8 @@ struct TextureViewerDesc
 class TextureViewer
 {
 public:
-	TextureViewer(RenderDevice* Device, Texture* tex, TextureViewerDesc ViewerDesc, bool flag);
-	TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool flag);
+	TextureViewer(RenderDevice* Device, Texture* tex, TextureViewerDesc ViewerDesc, bool GpuHeapflag);
+	TextureViewer(RenderDevice* Device, std::vector<Texture*>& texs, TextureViewerDesc* ViewerDescs, bool GpuHeapflag);
 
 	~TextureViewer()
 	{
@@ -81,6 +81,11 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle(uint32_t Offset = 0)
 	{
 		return m_Viewer.GetGpuHandle(Offset);
+	}
+
+	UINT64 GetFirstGpuHandleOffsetInHeap()
+	{
+		return m_Viewer.GetFirstGpuHandleOffsetInHeap();
 	}
 
 	std::pair<D3D12_DESCRIPTOR_HEAP_TYPE, ID3D12DescriptorHeap*> GetHeapInfo()

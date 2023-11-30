@@ -30,34 +30,37 @@ public:
 		m_RootParam.Constants.RegisterSpace = Space;
 	}
 
-	void InitAsConstantBuffer(UINT Register, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0)
+	void InitAsConstantBuffer(UINT Register, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0, D3D12_ROOT_DESCRIPTOR_FLAGS Flag = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 	{
 		m_RootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 		m_RootParam.ShaderVisibility = Visibility;
 		m_RootParam.Descriptor.ShaderRegister = Register;
 		m_RootParam.Descriptor.RegisterSpace = Space;
+		m_RootParam.Descriptor.Flags = Flag;
 	}
 
-	void InitAsBufferSRV(UINT Register, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0)
+	void InitAsBufferSRV(UINT Register, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0, D3D12_ROOT_DESCRIPTOR_FLAGS Flag = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 	{
 		m_RootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
 		m_RootParam.ShaderVisibility = Visibility;
 		m_RootParam.Descriptor.ShaderRegister = Register;
 		m_RootParam.Descriptor.RegisterSpace = Space;
+		m_RootParam.Descriptor.Flags = Flag;
 	}
 
-	void InitAsBufferUAV(UINT Register, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0)
+	void InitAsBufferUAV(UINT Register, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0, D3D12_ROOT_DESCRIPTOR_FLAGS Flag = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 	{
 		m_RootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
 		m_RootParam.ShaderVisibility = Visibility;
 		m_RootParam.Descriptor.ShaderRegister = Register;
 		m_RootParam.Descriptor.RegisterSpace = Space;
+		m_RootParam.Descriptor.Flags = Flag;
 	}
 
-	void InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE Type, UINT Register, UINT Count, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0)
+	void InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE Type, UINT Register, UINT Count, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0, D3D12_DESCRIPTOR_RANGE_FLAGS Flag = D3D12_DESCRIPTOR_RANGE_FLAG_NONE, UINT OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
 	{
 		InitAsDescriptorTable(1, Visibility);
-		SetTableRange(0, Type, Register, Count, Space);
+		SetTableRange(0, Type, Register, Count, Space, Flag, OffsetInDescriptorsFromTableStart);
 	}
 
 	void InitAsDescriptorTable(UINT RangeCount, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL)
@@ -65,24 +68,25 @@ public:
 		m_RootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		m_RootParam.ShaderVisibility = Visibility;
 		m_RootParam.DescriptorTable.NumDescriptorRanges = RangeCount;
-		m_RootParam.DescriptorTable.pDescriptorRanges = new D3D12_DESCRIPTOR_RANGE[RangeCount];
+		m_RootParam.DescriptorTable.pDescriptorRanges = new D3D12_DESCRIPTOR_RANGE1[RangeCount];
 	}
 
-	void SetTableRange(UINT RangeIndex, D3D12_DESCRIPTOR_RANGE_TYPE Type, UINT Register, UINT Count, UINT Space = 0)
+	void SetTableRange(UINT RangeIndex, D3D12_DESCRIPTOR_RANGE_TYPE Type, UINT Register, UINT Count, UINT Space = 0, D3D12_DESCRIPTOR_RANGE_FLAGS Flag = D3D12_DESCRIPTOR_RANGE_FLAG_NONE, UINT OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
 	{
-		D3D12_DESCRIPTOR_RANGE* range = const_cast<D3D12_DESCRIPTOR_RANGE*>(m_RootParam.DescriptorTable.pDescriptorRanges + RangeIndex);
+		D3D12_DESCRIPTOR_RANGE1* range = const_cast<D3D12_DESCRIPTOR_RANGE1*>(m_RootParam.DescriptorTable.pDescriptorRanges + RangeIndex);
 		range->RangeType = Type;
 		range->NumDescriptors = Count;
 		range->BaseShaderRegister = Register;
 		range->RegisterSpace = Space;
 
-		range->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		range->OffsetInDescriptorsFromTableStart = OffsetInDescriptorsFromTableStart;
+		range->Flags = Flag;
 	}
 	//函数符号重载，第二个const是修饰this的，表示不能改动成员变量
-	const D3D12_ROOT_PARAMETER& operator() (void) const { return m_RootParam; }
+	const D3D12_ROOT_PARAMETER1& operator() (void) const { return m_RootParam; }
 	
 protected:
-	D3D12_ROOT_PARAMETER m_RootParam;
+	D3D12_ROOT_PARAMETER1 m_RootParam;
 };
 
 class RootSignature

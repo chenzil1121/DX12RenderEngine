@@ -4,12 +4,14 @@
 #include <iostream>
 #include"AppBase.h"
 #include"SwapChain.h"
-#include"Model.h"
+#include"Scene.h"
 #include"imGuIZMOquat.h"
 #include"ImGui.h"
 #include"Sampler.h"
-#include"EnvMap.h"
-#include"IBL.h"
+#include"../RenderPass/IBL.h"
+#include"../RenderPass/EnvMap.h"
+#include"../RenderPass/BasePass.h"
+#include"../RenderPass/FXAA.h"
 
 class CoreTest :public AppBase
 {
@@ -46,7 +48,6 @@ public:
 
     bool Initialize();
     void CreateResources();
-    void CreateBasePass();
     void Update(const GameTimer& gt);
     void UpdateUI();
     void Render(const GameTimer& gt);
@@ -59,21 +60,18 @@ public:
 
     std::unique_ptr<SwapChain> m_SwapChain;
     std::unique_ptr<EnvMap> m_EnvMapPass;
-    std::unique_ptr<IBL>m_IBL;
+    std::unique_ptr<IBL> m_IBL;
+    std::unique_ptr<BasePass> m_BasePass;
+    std::unique_ptr<FXAA>m_FXAA;
 
-    std::unique_ptr<RootSignature> m_BasePassRS;
-
-    std::unique_ptr<GraphicsPSO> m_BasePassOpaquePSO;
-    std::unique_ptr<GraphicsPSO> m_BasePassBlendPSO;
-
-    std::unique_ptr<Model> m_Model;
+    std::unique_ptr<Scene> m_Scene;
 
     std::unique_ptr<ImGuiWrapper> m_ImGui;
     std::unique_ptr<Buffer> m_PassConstantBuffer;
 
-    quat m_ModelRotation = quat(1.0f, 0.0f, 0.0f, 0.0f);
+    quat m_SceneRotation = quat(1.0f, 0.0f, 0.0f, 0.0f);
     vec3 m_LightDirection = vec3(-0.5f, 0.5f, 1.0f);
-    
+
     PassConstants m_MainPassCB;
 
     D3D12_VIEWPORT m_viewport;

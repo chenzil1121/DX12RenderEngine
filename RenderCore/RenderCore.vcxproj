@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,13 +21,13 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{03351d72-2114-49bd-a817-7fadbe051beb}</ProjectGuid>
+    <ProjectGuid>{03351D72-2114-49BD-A817-7FADBE051BEB}</ProjectGuid>
     <RootNamespace>RenderCore</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -46,7 +46,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -72,17 +72,21 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(ProjectDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)Intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(ProjectDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(ProjectDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)Intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -90,9 +94,11 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -131,7 +137,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,52 +147,56 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Buffer.cpp" />
-    <ClCompile Include="CommandAllocatorPool.cpp" />
-    <ClCompile Include="CommandContext.cpp" />
-    <ClCompile Include="CommandListManager.cpp" />
-    <ClCompile Include="DDSTextureLoader12.cpp" />
-    <ClCompile Include="DescriptorHeap.cpp" />
-    <ClCompile Include="DynamicUploadHeap.cpp" />
-    <ClCompile Include="GameTimer.cpp" />
-    <ClCompile Include="MathHelper.cpp" />
-    <ClCompile Include="PipelineState.cpp" />
-    <ClCompile Include="RenderDevice.cpp" />
-    <ClCompile Include="RingBuffer.cpp" />
-    <ClCompile Include="RootSignature.cpp" />
-    <ClCompile Include="Sampler.cpp" />
-    <ClCompile Include="SwapChain.cpp" />
-    <ClCompile Include="Texture.cpp" />
-    <ClCompile Include="TextureLoader.cpp" />
-    <ClCompile Include="TextureViewer.cpp" />
-    <ClCompile Include="Utility.cpp" />
-    <ClCompile Include="WICTextureLoader12.cpp" />
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="..\ThirdParty\DXC\dxcapi.use.h" />
+    <ClInclude Include="AccelerationStructure.h" />
     <ClInclude Include="Buffer.h" />
+    <ClInclude Include="BufferView.h" />
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="CommandAllocatorPool.h" />
     <ClInclude Include="CommandContext.h" />
     <ClInclude Include="CommandListManager.h" />
     <ClInclude Include="d3dx12.h" />
-    <ClInclude Include="DDSTextureLoader12.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DynamicUploadHeap.h" />
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="GpuResource.h" />
     <ClInclude Include="MathHelper.h" />
     <ClInclude Include="PipelineState.h" />
+    <ClInclude Include="RayTracingPipelineState.h" />
+    <ClInclude Include="RayTracingShaderTable.h" />
     <ClInclude Include="RenderDevice.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="RootSignature.h" />
     <ClInclude Include="Sampler.h" />
     <ClInclude Include="SwapChain.h" />
     <ClInclude Include="Texture.h" />
-    <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="TextureViewer.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="VariableSizeAllocationsManager.h" />
     <ClInclude Include="VariableSizeGPUAllocationsManager.h" />
-    <ClInclude Include="WICTextureLoader12.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AccelerationStructure.cpp" />
+    <ClCompile Include="Buffer.cpp" />
+    <ClCompile Include="BufferView.cpp" />
+    <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CommandAllocatorPool.cpp" />
+    <ClCompile Include="CommandContext.cpp" />
+    <ClCompile Include="CommandListManager.cpp" />
+    <ClCompile Include="DescriptorHeap.cpp" />
+    <ClCompile Include="DynamicUploadHeap.cpp" />
+    <ClCompile Include="GameTimer.cpp" />
+    <ClCompile Include="MathHelper.cpp" />
+    <ClCompile Include="PipelineState.cpp" />
+    <ClCompile Include="RayTracingPipelineState.cpp" />
+    <ClCompile Include="RenderDevice.cpp" />
+    <ClCompile Include="RingBuffer.cpp" />
+    <ClCompile Include="RootSignature.cpp" />
+    <ClCompile Include="Sampler.cpp" />
+    <ClCompile Include="SwapChain.cpp" />
+    <ClCompile Include="Texture.cpp" />
+    <ClCompile Include="TextureViewer.cpp" />
+    <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

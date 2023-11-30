@@ -119,7 +119,6 @@ LRESULT AppBase::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		// WM_SIZE is sent when the user resizes the window.  
 	case WM_SIZE:
 		// Save the new client area dimensions.
-		m_Device.g_DisplayWidth;
 		m_Device.g_DisplayWidth = LOWORD(lParam);
 		m_Device.g_DisplayHeight = HIWORD(lParam);
 		if (m_Device.g_Device && m_FirstResize)

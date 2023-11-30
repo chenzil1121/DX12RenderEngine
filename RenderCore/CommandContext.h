@@ -2,13 +2,16 @@
 #include"CommandListManager.h"
 #include"GpuResource.h"
 #include"PipelineState.h"
+#include"RayTracingPipelineState.h"
 #include"RootSignature.h"
 #include"DescriptorHeap.h"
 
 class RenderDevice;
 class GraphicsContext;
 class ComputeContext;
-	 
+class RayTracingContext;
+class ShaderTable;
+
 class CommandContext
 {
 	friend class ContextManager;
@@ -28,21 +31,27 @@ public:
 		return reinterpret_cast<ComputeContext&>(*this);
 	}
 
+	RayTracingContext& GetRayTracingContext() {
+		return reinterpret_cast<RayTracingContext&>(*this);
+	}
+
 	//采用split Barrier
 	void TransitionResource(GpuResource* Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 	void BeginResourceTransition(GpuResource* Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
+	void InsertUAVBarrier(GpuResource* Resource, bool FlushImmediate = false);
 	inline void FlushResourceBarriers();
 
 	void SetPipelineState(const PSO& PSO);
 	void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr);
 
 	void CopyResource(GpuResource* Dest, GpuResource* Src);
+	void CopyTextureRegion(D3D12_TEXTURE_COPY_LOCATION* Dest, XMUINT3 DestXYZ, D3D12_TEXTURE_COPY_LOCATION* Src, const D3D12_BOX* SrcBox);
 
-	ID3D12GraphicsCommandList* GetCommandList() { return m_CommandList; }
+	ID3D12GraphicsCommandList4* GetCommandList() { return m_CommandList; }
 
 protected:
 	RenderDevice* m_pRenderDevice;
-	ID3D12GraphicsCommandList* m_CommandList;
+	ID3D12GraphicsCommandList4* m_CommandList;
 	ID3D12CommandAllocator* m_CurrentAllocator;
 
 	ID3D12RootSignature* m_CurGraphicsRootSignature;
@@ -63,6 +72,22 @@ protected:
 	D3D12_COMMAND_LIST_TYPE m_Type;
 };
 
+//注意声明顺序，CommandContext得先声明
+class ContextManager
+{
+public:
+	ContextManager(RenderDevice* Device) :m_pRenderDevice(Device) {}
+
+	CommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE Type);
+	void FreeContext(CommandContext* UsedContext);
+	void DestroyAllContexts();
+
+private:
+	RenderDevice* m_pRenderDevice;
+	std::vector<std::unique_ptr<CommandContext>> m_ContextPool[4];
+	std::queue<CommandContext*> m_AvailableContexts[4];
+};
+
 class GraphicsContext : public CommandContext
 {
 public:
@@ -71,10 +96,12 @@ public:
 
 	void SetRootSignature(const RootSignature& RootSig);
 	void SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE* DSV = nullptr);
+	void SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], bool flag, D3D12_CPU_DESCRIPTOR_HANDLE* DSV = nullptr);
 	void SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY Topology);
 	void SetViewportAndScissor(const D3D12_VIEWPORT& vp, const D3D12_RECT& rect);
 	void SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& IBView);
 	void SetVertexBuffer(UINT Slot, const D3D12_VERTEX_BUFFER_VIEW& VBView);
+	void SetConstantArray(UINT RootIndex, UINT NumConstants, const void* pConstants);
 	void SetConstantBuffer(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV);
 	void SetBufferSRV(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS SRV);
 	void SetBufferUAV(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS UAV);
@@ -91,6 +118,32 @@ public:
 class ComputeContext :public CommandContext
 {
 public:
+	void ClearUAV(D3D12_GPU_DESCRIPTOR_HANDLE GPUUAV, D3D12_CPU_DESCRIPTOR_HANDLE CPUUAV, GpuResource* Resource, const float* ClearColor);
+	void ClearUAV(D3D12_GPU_DESCRIPTOR_HANDLE GPUUAV, D3D12_CPU_DESCRIPTOR_HANDLE CPUUAV, GpuResource* Resource, const UINT* ClearColor);
+
+	void SetRootSignature(const RootSignature& RootSig);
+
+	void SetConstantArray(UINT RootIndex, UINT NumConstants, const void* pConstants);
+	void SetConstantBuffer(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV);
+	void SetBufferSRV(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS SRV);
+	void SetBufferUAV(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS UAV);
+	void SetDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle);
+
+	void Dispatch(size_t GroupCountX = 1, size_t GroupCountY = 1, size_t GroupCountZ = 1);
+};
+
+class RayTracingContext :public CommandContext
+{
+public:
+	void SetRayTracingPipelineState(const RayTracingPSO& PSO);
+	void SetRayTracingGlobalRootSignature(const RootSignature& RootSig);
+	void SetRayTracingRootDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle);
+	void SetRayTracingRootShaderResourceView(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS SRV);
+	void SetRayTracingRootConstantBufferView(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV);
+
+	void DispatchRays(ShaderTable* RayGenerationShaderRecord, ShaderTable* MissShaderTable, ShaderTable* HitGroupTable, UINT Width, UINT Height, UINT Depth, ShaderTable* CallableShaderTable = nullptr);
+
+	void BuildRaytracingAccelerationStructure(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* pASDesc);
 };
 
 /*
@@ -131,6 +184,12 @@ inline void CommandContext::CopyResource(GpuResource* Dest, GpuResource* Src)
 	m_CommandList->CopyResource(Dest->GetResource(), Src->GetResource());
 }
 
+inline void CommandContext::CopyTextureRegion(D3D12_TEXTURE_COPY_LOCATION* Dest, XMUINT3 DestXYZ, D3D12_TEXTURE_COPY_LOCATION* Src, const D3D12_BOX* SrcBox)
+{
+	FlushResourceBarriers();
+	m_CommandList->CopyTextureRegion(Dest, DestXYZ.x, DestXYZ.y, DestXYZ.z, Src, SrcBox);
+}
+
 inline void GraphicsContext::ClearRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE RTV, const float *Colour, D3D12_RECT* Rect)
 {
 	FlushResourceBarriers();
@@ -157,6 +216,11 @@ inline void GraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESC
 	m_CommandList->OMSetRenderTargets(NumRTVs, RTVs, FALSE, DSV);
 }
 
+inline void GraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], bool Flag, D3D12_CPU_DESCRIPTOR_HANDLE* DSV)
+{
+	m_CommandList->OMSetRenderTargets(NumRTVs, RTVs, Flag, DSV);
+}
+
 inline void GraphicsContext::SetViewportAndScissor(const D3D12_VIEWPORT& vp, const D3D12_RECT& rect)
 {
 	ASSERT(rect.left < rect.right&& rect.top < rect.bottom);
@@ -177,6 +241,11 @@ inline void GraphicsContext::SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& IBVie
 inline void GraphicsContext::SetVertexBuffer(UINT Slot, const D3D12_VERTEX_BUFFER_VIEW& VBView)
 {
 	m_CommandList->IASetVertexBuffers(Slot, 1, &VBView);
+}
+
+inline void GraphicsContext::SetConstantArray(UINT RootIndex, UINT NumConstants, const void* pConstants)
+{
+	m_CommandList->SetGraphicsRoot32BitConstants(RootIndex, NumConstants, pConstants, 0);
 }
 
 inline void GraphicsContext::SetConstantBuffer(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV)
@@ -230,18 +299,91 @@ inline void GraphicsContext::ResolveSubresource(GpuResource* pDstResource, UINT 
 	m_CommandList->ResolveSubresource(pDstResource->GetResource(), DstSubresource, pSrcResource->GetResource(), SrcSubresource, Format);
 }
 
-//注意声明顺序，CommandContext得先声明
-class ContextManager
+//Compute
+inline void ComputeContext::ClearUAV(D3D12_GPU_DESCRIPTOR_HANDLE GPUUAV, D3D12_CPU_DESCRIPTOR_HANDLE CPUUAV, GpuResource* Resource, const float* ClearColor)
 {
-public:
-	ContextManager(RenderDevice* Device):m_pRenderDevice(Device) {}
+	FlushResourceBarriers();
+	m_CommandList->ClearUnorderedAccessViewFloat(GPUUAV, CPUUAV, Resource->GetResource(), ClearColor, 0, nullptr);
+}
 
-	CommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE Type);
-	void FreeContext(CommandContext* UsedContext);
-	void DestroyAllContexts();
+inline void ComputeContext::ClearUAV(D3D12_GPU_DESCRIPTOR_HANDLE GPUUAV, D3D12_CPU_DESCRIPTOR_HANDLE CPUUAV, GpuResource* Resource, const UINT* ClearColor)
+{
+	FlushResourceBarriers();
+	m_CommandList->ClearUnorderedAccessViewUint(GPUUAV, CPUUAV, Resource->GetResource(), ClearColor, 0, nullptr);
+}
 
-private:
-	RenderDevice* m_pRenderDevice;
-	std::vector<std::unique_ptr<CommandContext>> m_ContextPool[4];
-	std::queue<CommandContext*> m_AvailableContexts[4];
-};
+inline void ComputeContext::SetRootSignature(const RootSignature& RootSig)
+{
+	if (RootSig.GetSignature() == m_CurComputeRootSignature)
+		return;
+
+	m_CommandList->SetComputeRootSignature(m_CurComputeRootSignature = RootSig.GetSignature());
+}
+
+inline void ComputeContext::SetConstantArray(UINT RootIndex, UINT NumConstants, const void* pConstants)
+{
+	m_CommandList->SetComputeRoot32BitConstants(RootIndex, NumConstants, pConstants, 0);
+}
+
+inline void ComputeContext::SetConstantBuffer(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV)
+{
+	m_CommandList->SetComputeRootConstantBufferView(RootIndex, CBV);
+}
+
+inline void ComputeContext::SetBufferSRV(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS SRV)
+{
+	m_CommandList->SetComputeRootShaderResourceView(RootIndex, SRV);
+}
+
+inline void ComputeContext::SetBufferUAV(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS UAV)
+{
+	m_CommandList->SetComputeRootUnorderedAccessView(RootIndex, UAV);
+}
+
+inline void ComputeContext::SetDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle)
+{
+	m_CommandList->SetComputeRootDescriptorTable(RootIndex, FirstHandle);
+}
+
+inline void ComputeContext::Dispatch(size_t GroupCountX, size_t GroupCountY, size_t GroupCountZ)
+{
+	FlushResourceBarriers();
+	m_CommandList->Dispatch((UINT)GroupCountX, (UINT)GroupCountY, (UINT)GroupCountZ);
+}
+
+//RayTracing
+inline void RayTracingContext::SetRayTracingPipelineState(const RayTracingPSO& PSO)
+{
+	m_CommandList->SetPipelineState1(PSO.GetPipelineStateObject());
+}
+
+inline void RayTracingContext::SetRayTracingGlobalRootSignature(const RootSignature& RootSig)
+{
+	if (RootSig.GetSignature() == m_CurComputeRootSignature)
+		return;
+
+	m_CommandList->SetComputeRootSignature(m_CurComputeRootSignature = RootSig.GetSignature());
+}
+
+inline void RayTracingContext::SetRayTracingRootDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle)
+{
+	m_CommandList->SetComputeRootDescriptorTable(RootIndex, FirstHandle);
+}
+
+inline void RayTracingContext::SetRayTracingRootShaderResourceView(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS SRV)
+{
+	m_CommandList->SetComputeRootShaderResourceView(RootIndex, SRV);
+}
+
+inline void RayTracingContext::SetRayTracingRootConstantBufferView(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV)
+{
+	m_CommandList->SetComputeRootConstantBufferView(RootIndex, CBV);
+}
+
+inline void RayTracingContext::BuildRaytracingAccelerationStructure(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* pASDesc)
+{
+	m_CommandList->BuildRaytracingAccelerationStructure(pASDesc, 0, nullptr);
+}
+
+
+

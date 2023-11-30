@@ -545,8 +545,8 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     psoDesc.SampleMask = UINT_MAX;
     psoDesc.NumRenderTargets = 1;
     psoDesc.RTVFormats[0] = bd->RTVFormat;
-    psoDesc.SampleDesc.Count = 4;
-    psoDesc.SampleDesc.Quality = DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN;
+    psoDesc.SampleDesc.Count = 1;
+    psoDesc.SampleDesc.Quality = 0;
     psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
     ID3DBlob* vertexShaderBlob;

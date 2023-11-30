@@ -1,5 +1,6 @@
 #include"CommandContext.h"
 #include"RenderDevice.h"
+#include"RayTracingShaderTable.h"
 
 CommandContext* ContextManager::AllocateContext(D3D12_COMMAND_LIST_TYPE Type)
 {
@@ -156,4 +157,41 @@ void CommandContext::BeginResourceTransition(GpuResource* Resource, D3D12_RESOUR
 
 	if (FlushImmediate || m_NumBarriersToFlush == 16)
 		FlushResourceBarriers();
+}
+
+void CommandContext::InsertUAVBarrier(GpuResource* Resource, bool FlushImmediate)
+{
+	ASSERT(m_NumBarriersToFlush < 16, "Exceeded arbitrary limit on buffered barriers");
+	D3D12_RESOURCE_BARRIER& BarrierDesc = m_ResourceBarrierBuffer[m_NumBarriersToFlush++];
+	
+	BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	BarrierDesc.UAV.pResource = Resource->GetResource();
+
+	if (FlushImmediate)
+		FlushResourceBarriers();
+}
+
+void RayTracingContext::DispatchRays(ShaderTable* RayGenerationShaderRecord, ShaderTable* MissShaderTable, ShaderTable* HitGroupTable, UINT Width, UINT Height, UINT Depth, ShaderTable* CallableShaderTable)
+{
+	FlushResourceBarriers();
+	D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
+	dispatchDesc.RayGenerationShaderRecord.StartAddress = RayGenerationShaderRecord->GetGPUVirtualAddress();
+	dispatchDesc.RayGenerationShaderRecord.SizeInBytes = RayGenerationShaderRecord->GetSizeInBytes();
+	dispatchDesc.MissShaderTable.StartAddress = MissShaderTable->GetGPUVirtualAddress();
+	dispatchDesc.MissShaderTable.SizeInBytes = MissShaderTable->GetSizeInBytes();
+	dispatchDesc.MissShaderTable.StrideInBytes = MissShaderTable->GetShaderRecordSize();
+	dispatchDesc.HitGroupTable.StartAddress = HitGroupTable->GetGPUVirtualAddress();
+	dispatchDesc.HitGroupTable.SizeInBytes = HitGroupTable->GetSizeInBytes();
+	dispatchDesc.HitGroupTable.StrideInBytes = HitGroupTable->GetShaderRecordSize();
+	if (CallableShaderTable)
+	{
+		dispatchDesc.CallableShaderTable.StartAddress = CallableShaderTable->GetGPUVirtualAddress();
+		dispatchDesc.CallableShaderTable.SizeInBytes = CallableShaderTable->GetSizeInBytes();
+		dispatchDesc.CallableShaderTable.StrideInBytes = CallableShaderTable->GetShaderRecordSize();
+	}
+	dispatchDesc.Width = Width;
+	dispatchDesc.Height = Height;
+	dispatchDesc.Depth = Depth;
+	m_CommandList->DispatchRays(&dispatchDesc);
 }

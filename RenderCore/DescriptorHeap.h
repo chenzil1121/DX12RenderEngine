@@ -2,8 +2,6 @@
 #include"Utility.h"
 #include"VariableSizeGPUAllocationsManager.h"
 
-using Microsoft::WRL::ComPtr;
-
 class DescriptorHeapAllocation;
 
 //作为CupDescriptorHeap和GupDescriptorHeap和DynamicSuballocationsManager的父类
@@ -31,6 +29,7 @@ public:
 	{
 		m_FirstCpuHandle.ptr = 0;
 		m_FirstGpuHandle.ptr = 0;
+		m_FirstGpuHandleOffsetInHeap = -1;
 	}
 
 	DescriptorHeapAllocation(
@@ -38,10 +37,12 @@ public:
 		ID3D12DescriptorHeap* pHeap,
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle,
 		D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle,
-		uint32_t                      NHandles,
-		uint32_t                      AllocationManagerId):
+		UINT64 GpuHandleOffsetInHeap,
+		uint32_t NHandles,
+		uint32_t AllocationManagerId):
 		m_FirstCpuHandle(CpuHandle),
 		m_FirstGpuHandle(GpuHandle),
+		m_FirstGpuHandleOffsetInHeap(GpuHandleOffsetInHeap),
 		m_pAllocator(Allocator),
 		m_pDescriptorHeap(pHeap),
 		m_NumHandles(NHandles),
@@ -53,6 +54,7 @@ public:
 	DescriptorHeapAllocation(DescriptorHeapAllocation&& rhs):
 		m_FirstCpuHandle(std::move(rhs.m_FirstCpuHandle)),
 		m_FirstGpuHandle(std::move(rhs.m_FirstGpuHandle)),
+		m_FirstGpuHandleOffsetInHeap(std::move(rhs.m_FirstGpuHandleOffsetInHeap)),
 		m_pAllocator(std::move(rhs.m_pAllocator)),
 		m_pDescriptorHeap(std::move(rhs.m_pDescriptorHeap))
 	{
@@ -74,6 +76,7 @@ public:
 	{
 		m_FirstCpuHandle = std::move(Allocation.m_FirstCpuHandle);
 		m_FirstGpuHandle = std::move(Allocation.m_FirstGpuHandle);
+		m_FirstGpuHandleOffsetInHeap = std::move(Allocation.m_FirstGpuHandleOffsetInHeap);
 		m_NumHandles = std::move(Allocation.m_NumHandles);
 		m_pAllocator = std::move(Allocation.m_pAllocator);
 		m_AllocationManagerId = std::move(Allocation.m_AllocationManagerId);
@@ -92,6 +95,7 @@ public:
 	{
 		m_FirstCpuHandle.ptr = 0;
 		m_FirstGpuHandle.ptr = 0;
+		m_FirstGpuHandleOffsetInHeap = -1;
 		m_pAllocator = nullptr;
 		m_pDescriptorHeap = nullptr;
 		m_NumHandles = 0;
@@ -112,12 +116,19 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle(uint32_t Offset = 0) const
 	{
 		ASSERT(Offset >= 0 && Offset < m_NumHandles);
+		ASSERT(IsShaderVisible(), "Descriptor Not Shader Visible");
 
 		D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle = m_FirstGpuHandle;
 		GPUHandle.ptr += UINT64(m_DescriptorSize) * UINT64(Offset);
 
 		return GPUHandle;
 	}
+	UINT64 GetFirstGpuHandleOffsetInHeap()
+	{
+		ASSERT(IsShaderVisible(), "Descriptor Not Shader Visible");
+		return m_FirstGpuHandleOffsetInHeap;
+	}
+
 
 	ID3D12DescriptorHeap* GetDescriptorHeap() const { return m_pDescriptorHeap; }
 
@@ -130,6 +141,7 @@ public:
 private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_FirstCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_FirstGpuHandle;
+	UINT64 m_FirstGpuHandleOffsetInHeap;
 
 	DescriptorAllocator* m_pAllocator;
 	ID3D12DescriptorHeap* m_pDescriptorHeap;

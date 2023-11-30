@@ -66,7 +66,7 @@ void CommandQueue::DiscardAllocator(uint64_t FenceValueForReset, ID3D12CommandAl
 uint64_t CommandQueue::ExecuteCommandList(ID3D12CommandList* List)
 {
 	
-	ASSERT_SUCCEEDED(((ID3D12GraphicsCommandList*)List)->Close());
+	ASSERT_SUCCEEDED(((ID3D12GraphicsCommandList4*)List)->Close());
 
 	m_CommandQueue->ExecuteCommandLists(1, &List);
 
@@ -131,7 +131,7 @@ void CommandListManager::Shutdown()
 	m_CopyQueue.Shutdown();
 }
 
-void CommandListManager::CreateNewCommandList(D3D12_COMMAND_LIST_TYPE Type, ID3D12GraphicsCommandList** List, ID3D12CommandAllocator** Allocator)
+void CommandListManager::CreateNewCommandList(D3D12_COMMAND_LIST_TYPE Type, ID3D12GraphicsCommandList4** List, ID3D12CommandAllocator** Allocator)
 {
 	switch (Type)
 	{

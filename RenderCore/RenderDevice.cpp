@@ -3,9 +3,9 @@
 #include "CommandContext.h"
 
 
-ID3D12Device* InitializeDevice()
+ID3D12Device5* InitializeDevice()
 {
-    ID3D12Device* pDevice = nullptr;
+    ID3D12Device5* pDevice = nullptr;
 
 	uint32_t useDebugLayers = 0;
 //VS自带的宏变量，调试模式下才执行
@@ -63,12 +63,12 @@ ID3D12Device* InitializeDevice()
             if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
                 continue;
 
-            // Can create a D3D12 device?
-            if (FAILED(D3D12CreateDevice(pAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice))))
-                continue;
-
             // By default, search for the adapter with the most memory because that's usually the dGPU.
             if (desc.DedicatedVideoMemory < MaxSize)
+                continue;
+
+            // Can create a D3D12 device?
+            if (FAILED(D3D12CreateDevice(pAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&pDevice))))
                 continue;
 
             MaxSize = desc.DedicatedVideoMemory;
@@ -99,6 +99,32 @@ ID3D12Device* InitializeDevice()
             pDevice->SetStablePowerState(TRUE);
     }
 #endif	
+
+    D3D12_FEATURE_DATA_D3D12_OPTIONS5 featureSupportData5 = {};
+    HRESULT hr = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featureSupportData5, sizeof(featureSupportData5));
+    if (SUCCEEDED(hr) && featureSupportData5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+    {
+        // DXR is supported
+        Utility::Printf(L"DXR is supported\n");
+    }
+    else
+    {
+        // DXR is not supported
+        Utility::Printf(L"DXR is not supported\n");
+    }
+
+    D3D12_FEATURE_DATA_D3D12_OPTIONS featureSupportData = {};
+    hr = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &featureSupportData, sizeof(featureSupportData));
+    if (SUCCEEDED(hr) && featureSupportData.StandardSwizzle64KBSupported)
+    {
+        Utility::Printf(L"StandardSwizzle64KBSupported is supported\n");
+    }
+    else
+    {
+        Utility::Printf(L"StandardSwizzle64KBSupported is not supported\n");
+    }
+
+
     return pDevice;
 }
 
@@ -144,6 +170,14 @@ GraphicsContext& RenderDevice::BeginGraphicsContext(const std::wstring ID)
     //NewContext->SetID(ID);
 
     return NewContext->GetGraphicsContext();
+}
+
+ComputeContext& RenderDevice::BeginComputeContext(const std::wstring ID)
+{
+    CommandContext* NewContext = g_ContextManager.AllocateContext(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+    //NewContext->SetID(ID);
+
+    return NewContext->GetComputeContext();
 }
 
 DescriptorHeapAllocation RenderDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count)
