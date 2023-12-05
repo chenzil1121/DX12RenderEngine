@@ -6,7 +6,7 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<std::uint32_t> indices, siz
 	m_MatID(MatID), 
 	m_AlphaMode(alphaMode)
 {
-	m_Constants.World = transformation;
+	m_WorldMatrix = transformation;
 	XMStoreFloat4x4(&m_Constants.WorldInvertTran, MathHelper::InverseTranspose(XMLoadFloat4x4(&m_Constants.World)));
 	SetupMesh(Device);
 }

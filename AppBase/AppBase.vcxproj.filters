@@ -74,6 +74,12 @@
     <ClCompile Include="..\RenderPass\FXAA.cpp">
       <Filter>RenderPass</Filter>
     </ClCompile>
+    <ClCompile Include="..\RenderPass\VarianceShadowMap.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RenderPass\GbufferPass.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
@@ -143,6 +149,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\RenderPass\FXAA.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\VarianceShadowMap.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\GbufferPass.h">
       <Filter>RenderPass</Filter>
     </ClInclude>
   </ItemGroup>

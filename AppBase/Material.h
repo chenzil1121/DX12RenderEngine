@@ -10,8 +10,6 @@ struct PBRParameter
 	XMFLOAT4 BaseColorFactor;
 	float RoughnessFactor;
 	float MetallicFactor;
-	float pad0;
-	float pad1;
 	BOOL HasUV;
 };
 

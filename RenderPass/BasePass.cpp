@@ -18,7 +18,7 @@ void BasePass::Create()
 	PsByteCode = Utility::CompileShader(L"../RenderPass/Shader/BasePass.hlsl", nullptr, "PS", "ps_5_1");
 
 	//RootSignature
-	BasePassRS.reset(new RootSignature(6, 2));
+	BasePassRS.reset(new RootSignature(8, 2));
 	BasePassRS->InitStaticSampler(0, Sampler::LinearWrap);
 	BasePassRS->InitStaticSampler(1, Sampler::LinearClamp);
 	(*BasePassRS)[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 3);
@@ -27,6 +27,8 @@ void BasePass::Create()
 	(*BasePassRS)[3].InitAsConstantBuffer(1);
 	(*BasePassRS)[4].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
 	(*BasePassRS)[5].InitAsConstantBuffer(2);
+	(*BasePassRS)[6].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6, 1);
+	(*BasePassRS)[7].InitAsConstantBuffer(3);
 
 
 	BasePassRS->Finalize(L"BasePass RootSignature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, pCore->g_Device);
@@ -83,7 +85,7 @@ void BasePass::Create()
 	BasePassBlendPSO->Finalize(pCore->g_Device);
 }
 
-void BasePass::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Scene* scene, IBL* ibl)
+void BasePass::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Scene* scene, IBL* ibl, VarianceShadowMap* vsm, bool isOpaque)
 {
 	Context.SetPipelineState(*BasePassOpaquePSO);
 	Context.SetRootSignature(*BasePassRS);
@@ -94,41 +96,46 @@ void BasePass::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Scen
 	auto IBLViewHeapInfo = IBLView->GetHeapInfo();
 	Context.SetDescriptorHeap(IBLViewHeapInfo.first, IBLViewHeapInfo.second);
 	Context.SetDescriptorTable(1, IBLView->GetGpuHandle());
+	Context.SetDescriptorTable(6, vsm->GetShadowMapSRV()->GetGpuHandle());
+	Context.SetConstantBuffer(7, vsm->GetShadowMapCB()->GetGpuVirtualAddress());
 
-	//Opaque Mesh
-	for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)].size(); i++)
-	{
+	if (isOpaque)
+	{//Opaque Mesh
+		for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)].size(); i++)
+		{
+			Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)][i];
+			Context.SetVertexBuffer(0, mesh.GetVertexBufferView());
+			Context.SetIndexBuffer(mesh.GetIndexBufferView());
+			Context.SetConstantBuffer(2, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
+			Context.SetConstantBuffer(5, scene->m_Materials[mesh.m_MatID].m_ConstantsBuffer->GetGpuVirtualAddress());
 
-		Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)][i];
-		Context.SetVertexBuffer(0, { mesh.m_VertexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Vertices.size() * sizeof(Vertex)),sizeof(Vertex) });
-		Context.SetIndexBuffer({ mesh.m_IndexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Indices.size() * sizeof(uint32_t)),DXGI_FORMAT_R32_UINT });
-		Context.SetConstantBuffer(2, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
-		Context.SetConstantBuffer(5, scene->m_Materials[mesh.m_MatID].m_ConstantsBuffer->GetGpuVirtualAddress());
+			auto FirstTexView = scene->m_Materials[mesh.m_MatID].GetTextureView();
+			auto HeapInfo = FirstTexView->GetHeapInfo();
+			Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
+			Context.SetDescriptorTable(0, FirstTexView->GetGpuHandle());
 
-		auto FirstTexView = scene->m_Materials[mesh.m_MatID].GetTextureView();
-		auto HeapInfo = FirstTexView->GetHeapInfo();
-		Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
-		Context.SetDescriptorTable(0, FirstTexView->GetGpuHandle());
-
-		Context.DrawIndexed(mesh.m_Indices.size());
+			Context.DrawIndexed(mesh.m_Indices.size());
+		}
 	}
-
-	//Blend Mesh
-	Context.SetPipelineState(*BasePassBlendPSO);
-	for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Blend)].size(); i++)
+	else
 	{
-		Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Blend)][i];
-		Context.SetVertexBuffer(0, { mesh.m_VertexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Vertices.size() * sizeof(Vertex)),sizeof(Vertex) });
-		Context.SetIndexBuffer({ mesh.m_IndexBuffer->GetGpuVirtualAddress(),(UINT)(mesh.m_Indices.size() * sizeof(uint32_t)),DXGI_FORMAT_R32_UINT });
-		Context.SetConstantBuffer(2, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
-		Context.SetConstantBuffer(5, scene->m_Materials[mesh.m_MatID].m_ConstantsBuffer->GetGpuVirtualAddress());
+		//Blend Mesh
+		Context.SetPipelineState(*BasePassBlendPSO);
+		for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Blend)].size(); i++)
+		{
+			Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Blend)][i];
+			Context.SetVertexBuffer(0, mesh.GetVertexBufferView());
+			Context.SetIndexBuffer(mesh.GetIndexBufferView());
+			Context.SetConstantBuffer(2, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
+			Context.SetConstantBuffer(5, scene->m_Materials[mesh.m_MatID].m_ConstantsBuffer->GetGpuVirtualAddress());
 
-		auto FirstTexView = scene->m_Materials[mesh.m_MatID].GetTextureView();
-		auto HeapInfo = FirstTexView->GetHeapInfo();
-		Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
-		Context.SetDescriptorTable(0, FirstTexView->GetGpuHandle());
+			auto FirstTexView = scene->m_Materials[mesh.m_MatID].GetTextureView();
+			auto HeapInfo = FirstTexView->GetHeapInfo();
+			Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
+			Context.SetDescriptorTable(0, FirstTexView->GetGpuHandle());
 
-		Context.DrawIndexed(mesh.m_Indices.size());
+			Context.DrawIndexed(mesh.m_Indices.size());
+		}
 	}
 }
 

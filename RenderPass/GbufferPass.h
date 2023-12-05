@@ -2,13 +2,12 @@
 #include "RenderDevice.h"
 #include "SwapChain.h"
 #include "Buffer.h"
-#include "Geometry.h"
+#include "Scene.h"
 #include "Material.h"
 #include "Sampler.h"
-#include "ShadowMap.h"
 #include "VarianceShadowMap.h"
 
-#define NUMRT 6
+#define NUMRT 5
 
 class Gbuffer 
 {
@@ -24,7 +23,7 @@ public:
 		CreateTexture();
 	}
 
-	void Render(GraphicsContext& Context, Buffer* PassConstantBuffer, std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, ShadowMap* shadowMap = nullptr);
+	void Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Scene* scene);
 
 	TextureViewer* GetGbufferSRV()
 	{
@@ -34,11 +33,6 @@ public:
 	TextureViewer* GetPreSRV()
 	{
 		return PreSRV.get();
-	}
-
-	TextureViewer* GetVisibilitySRV()
-	{
-		return VisSRV.get();
 	}
 
 	Texture* GetVisibility()
@@ -61,7 +55,6 @@ private:
 
 	std::unique_ptr<TextureViewer> GbufferRTV;
 	std::unique_ptr<TextureViewer> GbufferSRV;
-	std::unique_ptr<TextureViewer> VisSRV;
 	std::unique_ptr<TextureViewer> PreSRV;
 
 	std::array<std::pair<std::wstring, DXGI_FORMAT>, NUMRT> GbufferInfo =
@@ -71,7 +64,6 @@ private:
 		std::make_pair(L"NormalMetallic",DXGI_FORMAT_R32G32B32A32_FLOAT),
 		std::make_pair(L"MotionLinearZ",DXGI_FORMAT_R32G32B32A32_FLOAT),
 		std::make_pair(L"ObjectID",DXGI_FORMAT_R32_UINT),
-		std::make_pair(L"Visibility",DXGI_FORMAT_R32_FLOAT)
 	};
 
 	std::vector<std::array<float, 4>> rtvClearColors =
@@ -80,7 +72,6 @@ private:
 		{0.0f,0.0f,0.0f,0.0f},
 		{0.0f,0.0f,0.0f,0.0f},
 		{0.0f,0.0f,0.0f,0.0f},
-		{0.0f},
-		{1.0f}
+		{0.0f}
 	};
 };

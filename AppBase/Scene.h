@@ -64,18 +64,24 @@ struct Light
 struct MeshConstants
 {
 	XMFLOAT4X4 World = MathHelper::Identity4x4();
+	XMFLOAT4X4 PreWorld = MathHelper::Identity4x4();
 	XMFLOAT4X4 WorldInvertTran = MathHelper::Identity4x4();
+	int MeshID;
 };
 
 struct PassConstants
 {
 	XMFLOAT4X4 ViewProj = MathHelper::Identity4x4();
 	XMFLOAT4X4 ViewProjInvert = MathHelper::Identity4x4();
+	XMFLOAT4X4 PreViewProj = MathHelper::Identity4x4();
+	XMFLOAT4X4 View = MathHelper::Identity4x4();
+	XMFLOAT4X4 Proj = MathHelper::Identity4x4();
 	XMFLOAT3 CameraPos = { 0.0f,0.0f,0.0f };
-	float pad0 = 0.0f;
-	XMINT3 FirstLightIndex = { 0,0,0 };
+	float NearZ;
+	float FarZ;
+	XMINT2 FrameDimension;
 	int PrefilteredEnvMipLevels;
-	DebugViewType DebugView;
+	XMINT3 FirstLightIndex = { 0,0,0 };
 };
 
 class Mesh
@@ -88,9 +94,40 @@ public:
 	std::unique_ptr<Buffer> m_IndexBuffer;
 	std::unique_ptr<Buffer> m_ConstantsBuffer;
 	MeshConstants m_Constants;
+	XMFLOAT4X4 m_WorldMatrix;
 	std::string m_AlphaMode;
 
 	Mesh(std::vector<Vertex> vertices, std::vector<std::uint32_t> indices, size_t MatID, XMFLOAT4X4 transformation, std::string alphaMode, RenderDevice* Device);
+
+	D3D12_GPU_VIRTUAL_ADDRESS GetVertexBufferAddress() { return m_VertexBuffer->GetGpuVirtualAddress(); }
+	D3D12_GPU_VIRTUAL_ADDRESS GetIndexBufferAddress() { return m_IndexBuffer->GetGpuVirtualAddress(); }
+
+	XMFLOAT4X4 GetWorldMatrix() { return m_WorldMatrix; }
+
+	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView()
+	{
+		return {
+			GetVertexBufferAddress(),
+			(UINT)(m_Vertices.size() * sizeof(Vertex)),
+			sizeof(Vertex)
+		};
+	}
+
+	D3D12_INDEX_BUFFER_VIEW GetIndexBufferView()
+	{
+		return {
+			GetIndexBufferAddress(),
+			(UINT)(m_Indices.size() * sizeof(std::uint32_t)),
+			DXGI_FORMAT_R32_UINT
+		};
+	}
+
+	void UploadConstantsBuffer(RenderDevice* renderCore, MeshConstants* data)
+	{
+		m_ConstantsBuffer.reset(new Buffer(renderCore, nullptr, sizeof(MeshConstants), true, true));
+		m_ConstantsBuffer->Upload(data);
+	}
+
 private:
 	void SetupMesh(RenderDevice* Device);
 };

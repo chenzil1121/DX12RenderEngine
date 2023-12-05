@@ -22,8 +22,18 @@ bool CoreTest::Initialize()
 	//BasePass
 	m_BasePass.reset(new BasePass(&m_Device, m_SwapChain.get()));
 
+	//GbufferPass
+	m_GbufferPass.reset(new Gbuffer(&m_Device, m_SwapChain.get()));
+
 	//FXAA
 	m_FXAA.reset(new FXAA(&m_Device, m_SwapChain.get()));
+
+	//VarianceShadowMap
+	m_VSM.reset(new VarianceShadowMap(
+		&m_Device,
+		{ -m_LightDirection[0] * 3.0f, -m_LightDirection[1] * 3.0f, -m_LightDirection[2] * 3.0f },
+		{ m_LightDirection[0], m_LightDirection[1], m_LightDirection[2] }
+	));
 
 	return true;
 }
@@ -43,10 +53,7 @@ void CoreTest::CreateResources()
 	m_Camera.LookAt(pos, target, up);*/
 
 	//Scene
-	m_Scene.reset(new Scene("../Asset/FlightHelmet/FlightHelmet.gltf", &m_Device));
-	//m_Scene.reset(new Scene("../Asset/DamagedHelmet/DamagedHelmet.gltf", &m_Device));
-	//m_Scene.reset(new Scene("../Asset/BoomBoxWithAxes/BoomBoxWithAxes.gltf", &m_Device));
-	//m_Scene.reset(new Scene("../Asset/MetalRoughSpheresNoTextures/MetalRoughSpheresNoTextures.gltf", &m_Device));
+	m_Scene.reset(new Scene("../Asset/GLTFModel/GLTFModel.gltf", &m_Device));
 	//m_Scene.reset(new Scene("../Asset/Bistro/Bistro.gltf", &m_Device));
 	//m_Scene.reset(new Scene("../Asset/Sponza_new/Sponza_new.gltf", &m_Device));
 
@@ -59,11 +66,16 @@ void CoreTest::Update(const GameTimer& gt)
 	OnKeyboardInput(gt);
 
 	//ObjectConstantBuffer
+	int objectID = 0;
 	for (size_t i = 0; i < m_Scene->m_Meshes.size(); i++)
 	{
 		for (size_t j = 0; j < m_Scene->m_Meshes[i].size(); j++)
 		{
-			auto meshWorld = XMLoadFloat4x4(&m_Scene->m_Meshes[i][j].m_Constants.World);
+			Mesh& mesh = m_Scene->m_Meshes[i][j];
+			MeshConstants& meshConstants = mesh.m_Constants;
+			meshConstants.PreWorld = meshConstants.World;
+			meshConstants.MeshID = objectID++;
+			auto meshWorld = XMLoadFloat4x4(&mesh.GetWorldMatrix());
 			//Rotation
 			auto mat4 = mat4_cast(m_SceneRotation);
 			auto SceneRotation = XMLoadFloat4x4(&XMFLOAT4X4(mat4.m00, mat4.m01, mat4.m02, mat4.m03,
@@ -72,21 +84,14 @@ void CoreTest::Update(const GameTimer& gt)
 				mat4.m30, mat4.m31, mat4.m32, mat4.m33));
 			//Scale
 			//auto SceneScale = XMMatrixScaling(100.0f, 100.0f, 100.0f);
-
 			//auto Mat = meshWorld * SceneRotation * SceneScale;
-			auto Mat = meshWorld * SceneRotation;
-
+			auto Mat = meshWorld * SceneRotation;;
 			auto MatInvertTran = MathHelper::InverseTranspose(Mat);
-			XMFLOAT4X4 finalWorld;
-			XMFLOAT4X4 finalWorldInvertTran;
-			XMStoreFloat4x4(&finalWorld, XMMatrixTranspose(Mat));
-			XMStoreFloat4x4(&finalWorldInvertTran, XMMatrixTranspose(MatInvertTran));
-			MeshConstants meshConstants;
-			meshConstants.World = finalWorld;
-			meshConstants.WorldInvertTran = finalWorldInvertTran;
 
-			m_Scene->m_Meshes[i][j].m_ConstantsBuffer.reset(new Buffer(&m_Device, nullptr, (UINT)(sizeof(MeshConstants)), true, true));
-			m_Scene->m_Meshes[i][j].m_ConstantsBuffer->Upload(&meshConstants);
+			XMStoreFloat4x4(&meshConstants.World, XMMatrixTranspose(Mat));
+			XMStoreFloat4x4(&meshConstants.WorldInvertTran, XMMatrixTranspose(MatInvertTran));
+
+			mesh.UploadConstantsBuffer(&m_Device, &meshConstants);
 		}
 	}
 
@@ -95,9 +100,16 @@ void CoreTest::Update(const GameTimer& gt)
 	XMMATRIX proj = m_Camera.GetProj();
 	XMFLOAT3 pos = m_Camera.GetPosition3f();
 
+	m_MainPassCB.PreViewProj = m_MainPassCB.ViewProj;
 	XMStoreFloat4x4(&m_MainPassCB.ViewProj, XMMatrixTranspose(view * proj));
 	XMStoreFloat4x4(&m_MainPassCB.ViewProjInvert, XMMatrixTranspose(MathHelper::Inverse(view * proj)));
+	XMStoreFloat4x4(&m_MainPassCB.View, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&m_MainPassCB.Proj, XMMatrixTranspose(proj));
+	
 	m_MainPassCB.CameraPos = pos;
+	m_MainPassCB.NearZ = m_Camera.GetNearZ();
+	m_MainPassCB.FarZ = m_Camera.GetFarZ();
+	m_MainPassCB.FrameDimension = { (int)m_SwapChain->GetBackBufferDesc().Width , (int)m_SwapChain->GetBackBufferDesc().Height };
 	m_MainPassCB.PrefilteredEnvMipLevels = 9;
 
 	m_PassConstantBuffer.reset(new Buffer(&m_Device, nullptr, (UINT)(sizeof(PassConstants)), true, true));
@@ -107,6 +119,12 @@ void CoreTest::Update(const GameTimer& gt)
 	m_Scene->m_Lights[0].Direction = { m_LightDirection[0], m_LightDirection[1], m_LightDirection[2] };
 	m_Scene->m_LightBuffers.reset(new Buffer(&m_Device, nullptr, m_Scene->m_Lights.size() * sizeof(Light), true, true));
 	m_Scene->m_LightBuffers->Upload(m_Scene->m_Lights.data());
+
+	//VarianceShadowMap
+	m_VSM->UpdateLightVP(
+		{ -m_LightDirection[0] * 3.0f,-m_LightDirection[1] * 3.0f,-m_LightDirection[2] * 3.0f },
+		{ m_LightDirection[0], m_LightDirection[1], m_LightDirection[2] }
+	);
 	
 	//IMGUI
 	UpdateUI();
@@ -126,28 +144,6 @@ void CoreTest::UpdateUI()
 		ImGui::gizmo3D("Scene Rotation", m_SceneRotation, ImGui::GetTextLineHeight() * 10);
 		ImGui::SameLine();
 		ImGui::gizmo3D("Light direction", m_LightDirection, ImGui::GetTextLineHeight() * 10);
-		
-		std::array<const char*, static_cast<size_t>(DebugViewType::NumDebugViews)> DebugViews;
-		DebugViews[static_cast<size_t>(DebugViewType::None)] = "None";
-		DebugViews[static_cast<size_t>(DebugViewType::BaseColor)] = "Base Color";
-		DebugViews[static_cast<size_t>(DebugViewType::Transparency)] = "Transparency";
-		DebugViews[static_cast<size_t>(DebugViewType::NormalMap)] = "Normal Map";
-		DebugViews[static_cast<size_t>(DebugViewType::Occlusion)] = "Occlusion";
-		DebugViews[static_cast<size_t>(DebugViewType::Emissive)] = "Emissive";
-		DebugViews[static_cast<size_t>(DebugViewType::Metallic)] = "Metallic";
-		DebugViews[static_cast<size_t>(DebugViewType::Roughness)] = "Roughness";
-		DebugViews[static_cast<size_t>(DebugViewType::DiffuseColor)] = "Diffuse color";
-		DebugViews[static_cast<size_t>(DebugViewType::F0)] = "F0 (Specular color)";
-		DebugViews[static_cast<size_t>(DebugViewType::F90)] = "F90";
-		DebugViews[static_cast<size_t>(DebugViewType::MeshNormal)] = "Mesh normal";
-		DebugViews[static_cast<size_t>(DebugViewType::PerturbedNormal)] = "Perturbed normal";
-		DebugViews[static_cast<size_t>(DebugViewType::NdotV)] = "n*v";
-		DebugViews[static_cast<size_t>(DebugViewType::DiffuseIBL)] = "Diffuse IBL";
-		DebugViews[static_cast<size_t>(DebugViewType::SpecularIBL)] = "Specular IBL";
-
-
-
-		ImGui::Combo("Debug view", reinterpret_cast<int*>(&m_MainPassCB.DebugView), DebugViews.data(), static_cast<int>(DebugViews.size()));
 	}
 	ImGui::End();
 	ImGui::Render();
@@ -156,6 +152,11 @@ void CoreTest::UpdateUI()
 void CoreTest::Render(const GameTimer& gt)
 {
 	GraphicsContext& Context = m_Device.BeginGraphicsContext(L"Render");
+
+#ifdef FOWARD
+	//VarianceShadowMap
+	m_VSM->Render(Context, m_Scene.get());
+
 	Context.SetViewportAndScissor(m_viewport, m_scissor);
 	Context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	Context.SetRenderTargets(1, &m_SwapChain->GetBackBufferView(), &m_SwapChain->GetDepthBufferView());
@@ -163,11 +164,13 @@ void CoreTest::Render(const GameTimer& gt)
 	Context.ClearRenderTarget(m_SwapChain->GetBackBufferView(), DirectX::Colors::LightSlateGray, nullptr);
 	Context.ClearDepthAndStencil(m_SwapChain->GetDepthBufferView(), 1.0f, 0);
 
-	//BasePass
-	m_BasePass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get(), m_IBL.get());
-
 	//EnvMap
 	m_EnvMapPass->Render(Context, m_PassConstantBuffer.get());
+
+	//BasePassOpaque
+	m_BasePass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get(), m_IBL.get(), m_VSM.get(), true);
+	//BasePassBlend
+	m_BasePass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get(), m_IBL.get(), m_VSM.get(), false);
 
 	//FXAA
 	m_FXAA->Render(Context);
@@ -176,6 +179,35 @@ void CoreTest::Render(const GameTimer& gt)
 	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
 
 	Context.Finish(true);
+#endif // FOWARD
+
+#ifdef DEFFER
+	//VarianceShadowMap
+	m_VSM->Render(Context, m_Scene.get());
+
+	Context.SetViewportAndScissor(m_viewport, m_scissor);
+	Context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	Context.SetRenderTargets(1, &m_SwapChain->GetBackBufferView(), &m_SwapChain->GetDepthBufferView());
+	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	Context.ClearRenderTarget(m_SwapChain->GetBackBufferView(), DirectX::Colors::LightSlateGray, nullptr);
+	Context.ClearDepthAndStencil(m_SwapChain->GetDepthBufferView(), 1.0f, 0);
+
+	//EnvMap
+	m_EnvMapPass->Render(Context, m_PassConstantBuffer.get());
+
+	//GbufferPass
+	m_GbufferPass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get());
+
+	//m_ImGui->RenderDrawData(Context);
+	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
+
+	Context.Finish(true);
+#endif // DEFFER
+
+#ifdef DXR
+
+#endif // DXR
+
 }
 
 void CoreTest::Present()
@@ -199,6 +231,9 @@ void CoreTest::OnResize()
 	m_Camera.SetLens(XM_PIDIV4, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight, 0.1f, 1000.0f);
 	
 	m_FXAA->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
+#if (defined DEFFER)||(defined DXR)
+	m_GbufferPass->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
+#endif
 }
 
 void CoreTest::OnMouseDown(WPARAM btnState, int x, int y)

@@ -14,18 +14,16 @@ void Gbuffer::Create() {
 	ComPtr<ID3DBlob> VsByteCode = nullptr;
 	ComPtr<ID3DBlob> PsByteCode = nullptr;
 
-	VsByteCode = Utility::CompileShader(L"Shader/Gbuffer.hlsl", nullptr, "VS", "vs_5_1");
-	PsByteCode = Utility::CompileShader(L"Shader/Gbuffer.hlsl", nullptr, "PS", "ps_5_1");
+	VsByteCode = Utility::CompileShader(L"../RenderPass/Shader/Gbuffer.hlsl", nullptr, "VS", "vs_5_1");
+	PsByteCode = Utility::CompileShader(L"../RenderPass/Shader/Gbuffer.hlsl", nullptr, "PS", "ps_5_1");
 
 	//RootSignature
-	GbufferRS.reset(new RootSignature(6, 1));
+	GbufferRS.reset(new RootSignature(4, 1));
 	GbufferRS->InitStaticSampler(0, Sampler::LinearWrap);
 	(*GbufferRS)[0].InitAsConstantBuffer(0);
 	(*GbufferRS)[1].InitAsConstantBuffer(1);
 	(*GbufferRS)[2].InitAsConstantBuffer(2);
 	(*GbufferRS)[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 3);
-	(*GbufferRS)[4].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 1);
-	(*GbufferRS)[5].InitAsConstantBuffer(3);
 
 	GbufferRS->Finalize(L"GbufferPass RootSignature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, pCore->g_Device);
 
@@ -92,14 +90,6 @@ void Gbuffer::CreateTexture()
 	}
 	GbufferSRV.reset(new TextureViewer(pCore, pRTs, srvViewDescs.data(), true));
 
-	TextureViewerDesc visSRV;
-	visSRV.TexType = TextureType::Texture2D;
-	visSRV.ViewerType = TextureViewerType::SRV;
-	visSRV.MostDetailedMip = 0;
-	visSRV.NumMipLevels = 1;
-
-	VisSRV.reset(new TextureViewer(pCore, RTs[5].get(), visSRV, true));
-
 	//PreBuffer
 	texDesc = pSwapChain->GetBackBufferDesc();
 	D3D12_CLEAR_VALUE clearColor;
@@ -128,7 +118,7 @@ void Gbuffer::CreateTexture()
 	PreSRV.reset(new TextureViewer(pCore, pRTs, preSrvViewDescs.data(), true));
 }
 
-void Gbuffer::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, ShadowMap* shadowMap)
+void Gbuffer::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Scene* scene)
 {
 	//Copy to Pre
 	Context.TransitionResource(RTs[2].get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -152,37 +142,24 @@ void Gbuffer::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, std::
 	Context.SetPipelineState(*GbufferPSO);
 	Context.SetRootSignature(*GbufferRS);
 
-
 	Context.SetConstantBuffer(0, PassConstantBuffer->GetGpuVirtualAddress());
-	if (shadowMap)
+
+	for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)].size(); i++)
 	{
-		auto heapInfo = shadowMap->GetShadowMapSRV()->GetHeapInfo();
-		Context.SetDescriptorHeap(heapInfo.first, heapInfo.second);
-		Context.SetDescriptorTable(4, shadowMap->GetShadowMapSRV()->GetGpuHandle());
-	
-		Context.SetConstantBuffer(5, shadowMap->GetShadowMapCB()->GetGpuVirtualAddress());
-	}
-	for (size_t i = 0; i < geos.size(); i++)
-	{
-		for (size_t j = 0; j < geos[i]->size(); j++)
-		{
-			Mesh& mesh = geos[i]->Get(j);
-			PBRMaterial& mat = pbrMaterials[mesh.GetMat()];
+		Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)][i];
 
-			Context.SetVertexBuffer(0, mesh.GetVertexBufferView());
-			Context.SetIndexBuffer(mesh.GetIndexBufferView());
+		Context.SetVertexBuffer(0, mesh.GetVertexBufferView());
+		Context.SetIndexBuffer(mesh.GetIndexBufferView());
 
-			Context.SetConstantBuffer(1, mesh.GetConstantsBufferAddress());
+		Context.SetConstantBuffer(1, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
+		Context.SetConstantBuffer(2, scene->m_Materials[mesh.m_MatID].m_ConstantsBuffer->GetGpuVirtualAddress());
 
-			Context.SetConstantBuffer(2, mat.GetConstantsBufferAddress());
+		auto FirstTexView = scene->m_Materials[mesh.m_MatID].GetTextureView();
+		auto HeapInfo = FirstTexView->GetHeapInfo();
+		Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
+		Context.SetDescriptorTable(3, FirstTexView->GetGpuHandle());
 
-			auto FirstTexView = mat.GetTextureView();
-			auto HeapInfo = FirstTexView->GetHeapInfo();
-			Context.SetDescriptorHeap(HeapInfo.first, HeapInfo.second);
-			Context.SetDescriptorTable(3, FirstTexView->GetGpuHandle());
-
-			Context.DrawIndexedInstanced(mesh.GetIndexsInfo().first, 1, 0, 0, 0);
-		}
+		Context.DrawIndexed(mesh.m_Indices.size());
 	}
 
 	for (int i = 0; i < NUMRT; i++)

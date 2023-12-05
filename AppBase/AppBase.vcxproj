@@ -151,7 +151,9 @@
     <ClCompile Include="..\RenderPass\BasePass.cpp" />
     <ClCompile Include="..\RenderPass\EnvMap.cpp" />
     <ClCompile Include="..\RenderPass\FXAA.cpp" />
+    <ClCompile Include="..\RenderPass\GbufferPass.cpp" />
     <ClCompile Include="..\RenderPass\IBL.cpp" />
+    <ClCompile Include="..\RenderPass\VarianceShadowMap.cpp" />
     <ClCompile Include="..\ThirdParty\imgui\imgui.cpp" />
     <ClCompile Include="..\ThirdParty\imgui\imGuIZMO.quat\imGuIZMOquat.cpp" />
     <ClCompile Include="..\ThirdParty\imgui\imgui_demo.cpp" />
@@ -171,7 +173,9 @@
     <ClInclude Include="..\RenderPass\BasePass.h" />
     <ClInclude Include="..\RenderPass\EnvMap.h" />
     <ClInclude Include="..\RenderPass\FXAA.h" />
+    <ClInclude Include="..\RenderPass\GbufferPass.h" />
     <ClInclude Include="..\RenderPass\IBL.h" />
+    <ClInclude Include="..\RenderPass\VarianceShadowMap.h" />
     <ClInclude Include="..\ThirdParty\imgui\imconfig.h" />
     <ClInclude Include="..\ThirdParty\imgui\imgui.h" />
     <ClInclude Include="..\ThirdParty\imgui\imGuIZMO.quat\imGuIZMOquat.h" />

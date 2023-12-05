@@ -1,6 +1,7 @@
 #include "BRDF.hlsl"
 #include "IBLLighting.hlsl"
 #include "Tonemapping.hlsl"
+#include "VSM.hlsl"
 struct Light
 {
     float3 Strength;
@@ -19,6 +20,7 @@ Texture2D    g_NormalMap : register(t2);
 Texture2D    g_BRDFLUT : register(t3);
 TextureCube  g_IrradianceEnvMap : register(t4);
 TextureCube  g_PrefilteredEnvMap : register(t5);
+Texture2D   g_ShadowMap : register(t6);
 
 
 SamplerState g_samLinearWrap        : register(s0);
@@ -27,18 +29,24 @@ SamplerState g_samLinearClamp        : register(s1);
 cbuffer MeshConstants: register(b0)
 {
     float4x4 g_World;
+    float4x4 g_PreWorld;
     float4x4 g_WorldInvertTran;
+    uint g_ID;
 };
 
 cbuffer PassConstants: register(b1)
 {
     float4x4 g_ViewProj;
     float4x4 g_ViewProjInvert;
+    float4x4 g_PreViewProj;
+    float4x4 g_View;
+    float4x4 g_Proj;
     float3 g_CameraPos;
-    float pass_pad0;
-    int3 g_FirstLightIndex;
+    float g_NearZ;
+    float g_FarZ;
+    int2 g_Dim;
     int g_PrefilteredEnvMipLevels;
-    int g_DebugViewType;
+    int3 g_FirstLightIndex;
 };
 
 cbuffer MaterialConstants: register(b2)
@@ -46,9 +54,14 @@ cbuffer MaterialConstants: register(b2)
     float4 g_BaseColorFactor;
     float g_RoughnessFactor;
     float g_MetallicFactor;
-    float mat_pad0;
-    float mat_pad1;
     bool g_HasUV;
+}
+
+cbuffer ShadowConstants : register(b3)
+{
+    float4x4 g_LightVP;
+    float g_ShadowNearZ;
+    float g_ShadowFarZ;
 }
 
 struct VSInput
@@ -132,14 +145,19 @@ void PS(in  PSInput  PSIn, out PSOutput PSOut)
     float4 litColor = float4(0.0, 0.0, 0.0, BRDF.baseColor.a);
 
     //Directional
-    for (int i = 0; i < g_FirstLightIndex.x; i++)
+    /*for (int i = 0; i < g_FirstLightIndex.x; i++)
     {
         litColor.rgb += ComputeDirectionalLight(g_Lights[i], perturbedNormal, view, BRDF);
-    }
+    }*/
+
+    //MainLight(Directional)
+    float vis = CalculateShadow(g_ShadowMap, g_LightVP, PSIn.PosW, g_ShadowNearZ, g_ShadowFarZ);
+    litColor.rgb += ComputeDirectionalLight(g_Lights[0], perturbedNormal, view, BRDF) * vis;
+   
 
     //IBL
     IBLContribution IBLContrib = IBL(perturbedNormal, view, g_PrefilteredEnvMipLevels, BRDF, g_BRDFLUT, g_IrradianceEnvMap, g_PrefilteredEnvMap, g_samLinearClamp);
-    litColor.rgb += IBLContrib.Diffuse + IBLContrib.Specular;
+    litColor.rgb += (IBLContrib.Diffuse + IBLContrib.Specular) * 0.5;
 
     //ToneMapping
     ToneMappingAttribs TMAttribs;
@@ -149,7 +167,7 @@ void PS(in  PSInput  PSIn, out PSOutput PSOut)
     litColor.rgb = ToneMap(litColor.rgb, TMAttribs, 0.3);
 
     PSOut.Color = float4(litColor.rgb, litColor.a);
-    if (g_DebugViewType != 0)
+    /*if (g_DebugViewType != 0)
     {
         switch (g_DebugViewType)
         {
@@ -182,5 +200,5 @@ void PS(in  PSInput  PSIn, out PSOutput PSOut)
         case 15:PSOut.Color.rgb = IBLContrib.Specular;
             break;
         }
-    }
+    }*/
 }

@@ -5,8 +5,14 @@ cbuffer PassConstants: register(b0)
 {
     float4x4 g_ViewProj;
     float4x4 g_ViewProjInvert;
+    float4x4 g_PreViewProj;
+    float4x4 g_View;
+    float4x4 g_Proj;
     float3 g_CameraPos;
-    float pad0;
+    float g_NearZ;
+    float g_FarZ;
+    int2 g_Dim;
+    int g_PrefilteredEnvMipLevels;
     int3 g_FirstLightIndex;
 };
 

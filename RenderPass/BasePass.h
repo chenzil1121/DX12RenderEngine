@@ -4,6 +4,7 @@
 #include "Buffer.h"
 #include "IBL.h"
 #include "Scene.h"
+#include "VarianceShadowMap.h"
 
 class BasePass
 {
@@ -12,7 +13,8 @@ public:
 
 	void Create();
 
-	void Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Scene* model, IBL* ibl);
+	void Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Scene* scene, IBL* ibl, VarianceShadowMap* vsm, bool isOpaque);
+
 
 private:
 	RenderDevice* pCore;

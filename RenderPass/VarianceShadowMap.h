@@ -1,7 +1,14 @@
 #pragma once
 #pragma once
 #include "RenderDevice.h"
-#include "Geometry.h"
+#include "Scene.h"
+
+struct ShadowMapConstants
+{
+	XMFLOAT4X4 LightMVP;
+	float NearZ;
+	float FarZ;
+};
 
 class VarianceShadowMap
 {
@@ -12,7 +19,7 @@ public:
 
 	void UpdateLightVP(XMFLOAT3 LightPos, XMFLOAT3 LightDirection);
 
-	void Render(GraphicsContext& Context, std::vector<std::unique_ptr<Geometry>>& geos);
+	void Render(GraphicsContext& Context, Scene* scene);
 
 	Buffer* GetShadowMapCB()
 	{

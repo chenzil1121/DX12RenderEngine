@@ -13,8 +13,8 @@ void VarianceShadowMap::Create()
 	ComPtr<ID3DBlob> VsByteCode = nullptr;
 	ComPtr<ID3DBlob> PsByteCode = nullptr;
 
-	VsByteCode = Utility::CompileShader(L"Shader/VarianceShadowMap.hlsl", nullptr, "VS", "vs_5_1");
-	PsByteCode = Utility::CompileShader(L"Shader/VarianceShadowMap.hlsl", nullptr, "PS", "ps_5_1");
+	VsByteCode = Utility::CompileShader(L"../RenderPass/Shader/VarianceShadowMap.hlsl", nullptr, "VS", "vs_5_1");
+	PsByteCode = Utility::CompileShader(L"../RenderPass/Shader/VarianceShadowMap.hlsl", nullptr, "PS", "ps_5_1");
 
 	//RootSignature
 	VarianceShadowMapRS.reset(new RootSignature(2));
@@ -124,9 +124,7 @@ void VarianceShadowMap::UpdateLightVP(XMFLOAT3 LightPos, XMFLOAT3 LightDirection
 	shadowMapCnstants.NearZ = 0.1f;
 	shadowMapCnstants.FarZ = 1000.0f;
 
-	shadowMapCnstants.isOrthographic = TRUE;
 	XMMATRIX P = XMMatrixOrthographicLH(distance, distance, 0.1f, 1000.0f);
-	//shadowMapCnstants.isOrthographic = FALSE;
 	//XMMATRIX P = XMMatrixPerspectiveFovLH(XM_PIDIV4, 1.0f, 0.1f, 1000.0f);
 
 	XMStoreFloat4x4(&shadowMapCnstants.LightMVP, XMMatrixTranspose(V * P));
@@ -134,7 +132,7 @@ void VarianceShadowMap::UpdateLightVP(XMFLOAT3 LightPos, XMFLOAT3 LightDirection
 	ShadowMapCB.reset(new Buffer(pCore, &shadowMapCnstants, sizeof(ShadowMapConstants), false, true, L"ShadowMapConstants"));
 }
 
-void VarianceShadowMap::Render(GraphicsContext& Context, std::vector<std::unique_ptr<Geometry>>& geos)
+void VarianceShadowMap::Render(GraphicsContext& Context, Scene* scene)
 {
 	Context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	Context.SetViewportAndScissor(viewPort, scissor);
@@ -147,19 +145,17 @@ void VarianceShadowMap::Render(GraphicsContext& Context, std::vector<std::unique
 	Context.ClearDepthAndStencil(depthBufferView->GetCpuHandle(), 1.0f, 0);
 
 	Context.SetConstantBuffer(0, ShadowMapCB->GetGpuVirtualAddress());
-	for (size_t i = 0; i < geos.size(); i++)
+	
+	//Opaque Mesh
+	for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)].size(); i++)
 	{
-		for (size_t j = 0; j < geos[i]->size(); j++)
-		{
-			Mesh& mesh = geos[i]->Get(j);
+		Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)][i];
+		Context.SetVertexBuffer(0, mesh.GetVertexBufferView());
+		Context.SetIndexBuffer(mesh.GetIndexBufferView());
 
-			Context.SetVertexBuffer(0, mesh.GetVertexBufferView());
-			Context.SetIndexBuffer(mesh.GetIndexBufferView());
+		Context.SetConstantBuffer(1, mesh.m_ConstantsBuffer->GetGpuVirtualAddress());
 
-			Context.SetConstantBuffer(1, mesh.GetConstantsBufferAddress());
-
-			Context.DrawIndexedInstanced(mesh.GetIndexsInfo().first, 1, 0, 0, 0);
-		}
+		Context.DrawIndexed(mesh.m_Indices.size());
 	}
 	Context.TransitionResource(varianceShadowMap.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }

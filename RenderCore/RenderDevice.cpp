@@ -64,7 +64,7 @@ ID3D12Device5* InitializeDevice()
                 continue;
 
             // By default, search for the adapter with the most memory because that's usually the dGPU.
-            if (desc.DedicatedVideoMemory < MaxSize)
+            if (desc.DedicatedVideoMemory <= MaxSize)
                 continue;
 
             // Can create a D3D12 device?

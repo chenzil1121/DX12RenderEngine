@@ -3,10 +3,14 @@ DX12学习引擎
 
 ![avatar](Doc/Example.png)
 
-## Core
-
+## Require
+Assimp  
+RTX GPU
 ## Render Feature
-
-PBR  
-IBL  
-EnvMap
+- PBR Material   
+- IBL  
+- EnvMap
+- SimpleFowardRender
+- SimpleDefferRender
+- SVGF
+- DXR
