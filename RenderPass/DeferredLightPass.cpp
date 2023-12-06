@@ -13,16 +13,19 @@ void DeferredLightPass::Create()
 	ComPtr<ID3DBlob> VsByteCode = nullptr;
 	ComPtr<ID3DBlob> PsByteCode = nullptr;
 
-	VsByteCode = Utility::CompileShader(L"Shader/DeferredLight.hlsl", nullptr, "VS", "vs_5_1");
-	PsByteCode = Utility::CompileShader(L"Shader/DeferredLight.hlsl", nullptr, "PS", "ps_5_1");
+	VsByteCode = Utility::CompileShader(L"../RenderPass/Shader/DeferredLight.hlsl", nullptr, "VS", "vs_5_1");
+	PsByteCode = Utility::CompileShader(L"../RenderPass/Shader/DeferredLight.hlsl", nullptr, "PS", "ps_5_1");
 
 	//RootSignature
-	DeferredLightRS.reset(new RootSignature(4, 1));
+	DeferredLightRS.reset(new RootSignature(6, 1));
 	DeferredLightRS->InitStaticSampler(0, Sampler::LinearClamp);
 	(*DeferredLightRS)[0].InitAsConstantBuffer(0);
-	(*DeferredLightRS)[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6);
-	(*DeferredLightRS)[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6, 3);
-	(*DeferredLightRS)[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 9, 1);
+	(*DeferredLightRS)[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 5);
+	(*DeferredLightRS)[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 3);
+	(*DeferredLightRS)[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8, 1);
+	(*DeferredLightRS)[4].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
+	(*DeferredLightRS)[5].InitAsConstantBuffer(1);
+
 
 	DeferredLightRS->Finalize(L"DeferredLight RootSignature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, pCore->g_Device);
 	
@@ -48,7 +51,7 @@ void DeferredLightPass::Create()
 	DeferredLightPSO->Finalize(pCore->g_Device);
 }
 
-void DeferredLightPass::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, TextureViewer* GbufferSRV, TextureViewer* IBLView, TextureViewer* AOView)
+void DeferredLightPass::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, TextureViewer* GbufferSRV, TextureViewer* IBLView, VarianceShadowMap* vsm, Scene* scene)
 {
 	Context.SetPipelineState(*DeferredLightPSO);
 	Context.SetRootSignature(*DeferredLightRS);
@@ -56,6 +59,8 @@ void DeferredLightPass::Render(GraphicsContext& Context, Buffer* PassConstantBuf
 	Context.SetConstantBuffer(0, PassConstantBuffer->GetGpuVirtualAddress());
 	Context.SetDescriptorTable(1, GbufferSRV->GetGpuHandle());
 	Context.SetDescriptorTable(2, IBLView->GetGpuHandle());
-	Context.SetDescriptorTable(3, AOView->GetGpuHandle());
+	Context.SetBufferSRV(4, scene->m_LightBuffers->GetGpuVirtualAddress());
+	Context.SetConstantBuffer(5, vsm->GetShadowMapCB()->GetGpuVirtualAddress());
+	Context.SetDescriptorTable(3, vsm->GetShadowMapSRV()->GetGpuHandle());
 	Context.Draw(3);
 }

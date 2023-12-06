@@ -25,6 +25,13 @@ bool CoreTest::Initialize()
 	//GbufferPass
 	m_GbufferPass.reset(new Gbuffer(&m_Device, m_SwapChain.get()));
 
+	//DeferredLightPass
+	m_DeferredLightPass.reset(new DeferredLightPass(&m_Device, m_SwapChain.get()));
+
+#ifdef DXR
+	m_RayTracingPass.reset(new RayTracingPass(&m_Device, m_SwapChain.get(), m_Scene.get()));
+#endif // DXR
+
 	//FXAA
 	m_FXAA.reset(new FXAA(&m_Device, m_SwapChain.get()));
 
@@ -58,6 +65,7 @@ void CoreTest::CreateResources()
 	//m_Scene.reset(new Scene("../Asset/Sponza_new/Sponza_new.gltf", &m_Device));
 
 	m_Scene->AddDirectionalLight({ 10.0f, 10.0f, 10.0f }, { m_LightDirection[0], m_LightDirection[1], m_LightDirection[2] });
+	m_Scene->AddPointLight({ 10.0f, 10.0f, 10.0f }, { 0.0f, 20.0f, 3.0f }, 0.0, 1.0);
 	m_MainPassCB.FirstLightIndex = XMINT3(1, 0, 0);
 }
 
@@ -66,6 +74,9 @@ void CoreTest::Update(const GameTimer& gt)
 	OnKeyboardInput(gt);
 
 	//ObjectConstantBuffer
+#ifdef DXR
+	std::vector<XMFLOAT4X4>matrixs;//For RayTracing AccelerationStructure
+#endif 
 	int objectID = 0;
 	for (size_t i = 0; i < m_Scene->m_Meshes.size(); i++)
 	{
@@ -92,8 +103,17 @@ void CoreTest::Update(const GameTimer& gt)
 			XMStoreFloat4x4(&meshConstants.WorldInvertTran, XMMatrixTranspose(MatInvertTran));
 
 			mesh.UploadConstantsBuffer(&m_Device, &meshConstants);
+			
+#ifdef DXR
+			if (i == (size_t)LayerType::Opaque)
+				matrixs.push_back(meshConstants.World);
+#endif
 		}
 	}
+
+#ifdef DXR
+	m_RayTracingPass->UpdateTASMatrixs(matrixs);
+#endif
 
 	//PassConstantBuffer
 	XMMATRIX view = m_Camera.GetView();
@@ -192,20 +212,45 @@ void CoreTest::Render(const GameTimer& gt)
 	Context.ClearRenderTarget(m_SwapChain->GetBackBufferView(), DirectX::Colors::LightSlateGray, nullptr);
 	Context.ClearDepthAndStencil(m_SwapChain->GetDepthBufferView(), 1.0f, 0);
 
-	//EnvMap
-	m_EnvMapPass->Render(Context, m_PassConstantBuffer.get());
-
 	//GbufferPass
 	m_GbufferPass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get());
 
-	//m_ImGui->RenderDrawData(Context);
+	//DeferredLight
+	m_DeferredLightPass->Render(Context, m_PassConstantBuffer.get(), m_GbufferPass->GetGbufferSRV(), m_IBL->GetIBLView(), m_VSM.get(), m_Scene.get());
+
+	//EnvMap
+	m_EnvMapPass->Render(Context, m_PassConstantBuffer.get());
+
+	//BasePassBlend
+	m_BasePass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get(), m_IBL.get(), m_VSM.get(), false);
+
+	//FXAA
+	m_FXAA->Render(Context);
+
+	m_ImGui->RenderDrawData(Context);
 	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
 
 	Context.Finish(true);
 #endif // DEFFER
 
 #ifdef DXR
+	Context.SetViewportAndScissor(m_viewport, m_scissor);
+	Context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	Context.SetRenderTargets(1, &m_SwapChain->GetBackBufferView(), &m_SwapChain->GetDepthBufferView());
+	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	Context.ClearRenderTarget(m_SwapChain->GetBackBufferView(), DirectX::Colors::LightSlateGray, nullptr);
+	Context.ClearDepthAndStencil(m_SwapChain->GetDepthBufferView(), 1.0f, 0);
 
+	//GbufferPass
+	m_GbufferPass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get());
+
+	//RayTracingPass
+	m_RayTracingPass->Render(Context.GetRayTracingContext(), m_Camera.GetPosition3f(), m_Scene->m_Lights[1], m_EnvMapPass->GetEnvMapView(), m_GbufferPass->GetGbufferSRV());
+
+	//m_ImGui->RenderDrawData(Context);
+	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
+
+	Context.Finish(true);
 #endif // DXR
 
 }
@@ -233,6 +278,10 @@ void CoreTest::OnResize()
 	m_FXAA->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
 #if (defined DEFFER)||(defined DXR)
 	m_GbufferPass->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
+#endif
+
+#ifdef DXR
+	m_RayTracingPass->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
 #endif
 }
 

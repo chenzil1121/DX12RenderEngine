@@ -5,19 +5,41 @@
 #include "RayTracingShaderTable.h"
 #include "AccelerationStructure.h"
 #include "BufferView.h"
-#include "Geometry.h"
-#include "Camera.h"
+#include "Scene.h"
 #include "GbufferPass.h"
 #include "TextureViewer.h"
+
+struct InstanceInfo
+{
+	int VertexBufferID;
+	int IndexBufferID;
+	int BaseColorTexID;
+	int RoughnessMetallicTexID;
+	int NormalTexID;
+	int pad0;
+	int pad1;
+	int pad2;
+	PBRParameter parameter;
+};
+
+struct RayTracingConstants
+{
+	XMFLOAT4 CameraPosition;
+	uint32_t FrameCount;
+	uint32_t VertexSRVOffsetInHeap;
+	uint32_t IndexSRVOffsetInHeap;
+	uint32_t PBRTexSRVOffsetInHeap;
+	Light PointLight;
+};
 
 class RayTracingPass
 {
 public:
-	RayTracingPass(RenderDevice* pCore, SwapChain* pSwapChain, std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, std::vector<std::unique_ptr<Texture>>& pbrTexture);
+	RayTracingPass(RenderDevice* pCore, SwapChain* pSwapChain, Scene* scene);
 
-	void Create(std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, std::vector<std::unique_ptr<Texture>>& pbrTexture);
+	void Create(Scene* scene);
 
-	void CreateBindless(std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, std::vector<std::unique_ptr<Texture>>& pbrTexture);
+	void CreateBindless(Scene* scene);
 
 	void CreateShadowOutput()
 	{
@@ -75,7 +97,7 @@ public:
 		return reflectOutputSRV.get();
 	}
 
-	void Render(RayTracingContext& Context, Camera& camera, PointLight pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV);
+	void Render(RayTracingContext& Context, XMFLOAT3 cameraPos, Light pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV);
 
 private:
 	RenderDevice* pCore;

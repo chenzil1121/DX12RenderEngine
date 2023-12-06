@@ -4,9 +4,10 @@ std::unique_ptr<Texture>BasePBRMat::DefaultBaseColorTex;
 std::unique_ptr<Texture>BasePBRMat::DefaultRoughnessMetallicTex;
 std::unique_ptr<Texture>BasePBRMat::DefaultNormalTex;
 
-BasePBRMat::BasePBRMat(RenderDevice* pDeivce, std::string Name, std::vector<Texture*> pTexs, PBRParameter Parameter):
+BasePBRMat::BasePBRMat(RenderDevice* pDeivce, std::string Name, std::vector<Texture*> pTexs, std::vector<int>TexsID, PBRParameter Parameter):
 	m_Name(Name),
-	m_Parameter(Parameter)
+	m_Parameter(Parameter),
+	m_IDs(TexsID)
 {
 	std::array<TextureViewerDesc, 3>texViewDescs;
 	for (size_t i = 0; i < texViewDescs.size(); i++)
@@ -113,7 +114,7 @@ BasePBRMat BasePBRMat::DefaulMat(RenderDevice* pDeivce)
 		Context.TransitionResource(DefaultNormalTex.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		Context.Finish(true);
 	}
-
+	std::vector<int>IDs = { 0,1,2 };
 	std::vector<Texture*> texs = { DefaultBaseColorTex.get(),DefaultRoughnessMetallicTex.get(),DefaultNormalTex.get() };
-	return BasePBRMat(pDeivce, "DefaulMat", texs, parameter);
+	return BasePBRMat(pDeivce, "DefaulMat", texs, IDs, parameter);
 }

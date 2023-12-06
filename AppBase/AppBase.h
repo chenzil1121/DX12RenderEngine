@@ -3,8 +3,8 @@
 #include <WindowsX.h>
 #include <string>
 #include"GameTimer.h"
-#include"RenderDevice.h"
 #include"Camera.h"
+#include"RenderDevice.h"
 
 class AppBase
 {
@@ -58,7 +58,6 @@ protected:
     bool      m_FullscreenState = false;// fullscreen enabled
     bool      m_FirstResize = false;
 
-    // Used to keep track of the “delta-time?and game time (?.4).
     GameTimer m_Timer;
 
 	Camera m_Camera;

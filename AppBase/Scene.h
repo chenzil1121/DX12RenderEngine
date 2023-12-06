@@ -16,27 +16,6 @@ enum class LayerType
 	LayerNum
 };
 
-enum class DebugViewType
-{
-	None,
-	BaseColor,
-	Transparency,
-	NormalMap,
-	Occlusion,
-	Emissive,
-	Metallic,
-	Roughness,
-	DiffuseColor,
-	F0,
-	F90,
-	MeshNormal,
-	PerturbedNormal,
-	NdotV,
-	DiffuseIBL,
-	SpecularIBL,
-	NumDebugViews
-};
-
 struct Vertex
 {
 	XMFLOAT3 Position;

@@ -137,6 +137,7 @@ void Scene::LoadMaterial(aiMaterial* mat, bool HasUV)
 
 	std::array<aiTextureType, 3> types;
 	std::vector<Texture*>pTexs;
+	std::vector<int>TexsID;
 	types[0] = aiTextureType_BASE_COLOR;
 	types[1] = aiTextureType_METALNESS;
 	types[2] = aiTextureType_NORMALS;
@@ -148,39 +149,41 @@ void Scene::LoadMaterial(aiMaterial* mat, bool HasUV)
 			{
 			case aiTextureType_BASE_COLOR:
 				pTexs.push_back(BasePBRMat::DefaultBaseColorTex.get());
+				TexsID.push_back(0);
 				break;
 			case aiTextureType_METALNESS:
 				pTexs.push_back(BasePBRMat::DefaultRoughnessMetallicTex.get());
+				TexsID.push_back(1);
 				break;
 			case aiTextureType_NORMALS:
 				pTexs.push_back(BasePBRMat::DefaultNormalTex.get());
+				TexsID.push_back(2);
 				break;
 			}
 		}
 		{
-			for (size_t i = 0; i < mat->GetTextureCount(types[k]); i++)
-			{
-				aiString str;
-				mat->GetTexture(types[k], i, &str);
-				bool skip = false;
+			aiString str;
+			mat->GetTexture(types[k], 0, &str);
+			bool skip = false;
 
-				for (size_t j = 0; j < m_Textures.size(); j++)
+			for (size_t j = 0; j < m_Textures.size(); j++)
+			{
+				if (Utility::WstringToString(m_Textures[j]->GetName()) == str.C_Str())
 				{
-					if (Utility::WstringToString(m_Textures[j]->GetName()) == str.C_Str())
-					{
-						skip = true;
-						pTexs.push_back(m_Textures[j].get());
-						break;
-					}
+					skip = true;
+					pTexs.push_back(m_Textures[j].get());
+					TexsID.push_back(j);
+					break;
 				}
-				if (!skip)
-				{
-					std::string Path = std::string(m_Directory) + '\\' + str.C_Str();
-					m_Textures.push_back(std::move(TextureLoader::LoadTextureFromFile(Path, m_pDevice)));
-					pTexs.push_back(m_Textures[m_Textures.size() - 1].get());
-				}
+			}
+			if (!skip)
+			{
+				std::string Path = std::string(m_Directory) + '\\' + str.C_Str();
+				m_Textures.push_back(std::move(TextureLoader::LoadTextureFromFile(Path, m_pDevice)));
+				pTexs.push_back(m_Textures[m_Textures.size() - 1].get());
+				TexsID.push_back(m_Textures.size() - 1);
 			}
 		}
 	}
-	m_Materials.emplace_back(m_pDevice, mat->GetName().C_Str(), pTexs, pbrParameter);
+	m_Materials.emplace_back(m_pDevice, mat->GetName().C_Str(), pTexs, TexsID, pbrParameter);
 }

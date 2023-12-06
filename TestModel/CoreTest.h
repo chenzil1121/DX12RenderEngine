@@ -11,13 +11,15 @@
 #include"../RenderPass/IBL.h"
 #include"../RenderPass/EnvMap.h"
 #include"../RenderPass/BasePass.h"
-#include"../RenderPass//GbufferPass.h"
+#include"../RenderPass/GbufferPass.h"
 #include"../RenderPass/FXAA.h"
 #include"../RenderPass/VarianceShadowMap.h"
+#include"../RenderPass/DeferredLightPass.h"
+#include"../RenderPass/RayTracingPass.h"
 
 //#define FOWARD
-#define DEFFER
-//#define DXR
+//#define DEFFER
+#define DXR
 
 class CoreTest :public AppBase
 {
@@ -69,8 +71,10 @@ public:
     std::unique_ptr<IBL> m_IBL;
     std::unique_ptr<BasePass> m_BasePass;
     std::unique_ptr<Gbuffer> m_GbufferPass;
+    std::unique_ptr<DeferredLightPass> m_DeferredLightPass;
     std::unique_ptr<FXAA> m_FXAA;
     std::unique_ptr<VarianceShadowMap> m_VSM;
+    std::unique_ptr<RayTracingPass> m_RayTracingPass;
 
     std::unique_ptr<Scene> m_Scene;
 

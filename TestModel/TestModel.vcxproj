@@ -85,6 +85,8 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -128,6 +130,13 @@
       <AdditionalLibraryDirectories>$(SolutionDir)RenderCore\Binaries\x64\Debug;$(SolutionDir)AppBase\Binaries\x64\Debug;$(SolutionDir)packages\directxtk12_desktop_2019.2023.4.28.1\native\lib\x64\Debug</AdditionalLibraryDirectories>
       <AdditionalDependencies>RenderCore.lib;AppBase.lib;DirectXTK12.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>copy $(SolutionDir)ThirdParty\DXC\dxcompiler.dll $(ProjectDir)Binaries\$(Platform)\$(Configuration)\
+copy $(SolutionDir)ThirdParty\DXC\dxil.dll $(ProjectDir)Binaries\$(Platform)\$(Configuration)\</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>copy dlls</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -147,6 +156,21 @@
       <AdditionalLibraryDirectories>$(SolutionDir)RenderCore\Binaries\x64\Release;$(SolutionDir)AppBase\Binaries\x64\Release</AdditionalLibraryDirectories>
       <AdditionalDependencies>RenderCore.lib;AppBase.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>copy $(SolutionDir)ThirdParty\DXC\dxcompiler.dll $(ProjectDir)Binaries\$(Platform)\$(Configuration)\
+copy $(SolutionDir)ThirdParty\DXC\dxil.dll $(ProjectDir)Binaries\$(Platform)\$(Configuration)\</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>copy dlls</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CoreTest.cpp" />

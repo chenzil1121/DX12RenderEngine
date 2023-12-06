@@ -1,19 +1,19 @@
 #include "RayTracingPass.h"
 
-RayTracingPass::RayTracingPass(RenderDevice* pCore, SwapChain* pSwapChain, std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, std::vector<std::unique_ptr<Texture>>& pbrTexture):
+RayTracingPass::RayTracingPass(RenderDevice* pCore, SwapChain* pSwapChain, Scene* scene):
 	pCore(pCore),
 	pSwapChain(pSwapChain)
 {
-	Create(geos, pbrMaterials, pbrTexture);
+	Create(scene);
 	Resize(pCore->g_DisplayWidth, pCore->g_DisplayHeight, (FLOAT)pCore->g_DisplayWidth / (FLOAT)pCore->g_DisplayHeight);
 }
 
-void RayTracingPass::Create(std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, std::vector<std::unique_ptr<Texture>>& pbrTexture)
+void RayTracingPass::Create(Scene* scene)
 {
-	CreateBindless(geos, pbrMaterials, pbrTexture);
+	CreateBindless(scene);
 
 	//Shader
-	ComPtr<IDxcBlob> rayTacingShader = Utility::CompileLibrary(L"Shader/Raytracing.hlsl", L"lib_6_3");
+	ComPtr<IDxcBlob> rayTacingShader = Utility::CompileLibrary(L"../RenderPass/Shader/Raytracing.hlsl", L"lib_6_3");
 
 	//Global RootSignature
 	globalRS.reset(new RootSignature(8, 2));
@@ -48,24 +48,23 @@ void RayTracingPass::Create(std::vector<std::unique_ptr<Geometry>>& geos, std::m
 
 	//Build AccelerationStructure
 	std::vector<std::pair<D3D12_RAYTRACING_GEOMETRY_DESC, XMFLOAT4X4>> geomDescs;
-	for (size_t i = 0; i < geos.size(); i++)
+	for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)].size(); i++)
 	{
-		for (size_t j = 0; j < geos[i]->size(); j++)
-		{
-			std::pair<D3D12_RAYTRACING_GEOMETRY_DESC, XMFLOAT4X4> geomDesc;
-			geomDesc.first.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-			geomDesc.first.Triangles.VertexBuffer.StartAddress = geos[i]->Get(j).GetVertexBufferAddress();
-			geomDesc.first.Triangles.VertexBuffer.StrideInBytes = geos[i]->Get(j).GetVertexsInfo().second;
-			geomDesc.first.Triangles.VertexCount = geos[i]->Get(j).GetVertexsInfo().first;
-			geomDesc.first.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-			geomDesc.first.Triangles.IndexBuffer = geos[i]->Get(j).GetIndexBufferAddress();
-			geomDesc.first.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-			geomDesc.first.Triangles.IndexCount = geos[i]->Get(j).GetIndexsInfo().first;
-			geomDesc.first.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-			XMStoreFloat4x4(&geomDesc.second, XMMatrixTranspose(XMLoadFloat4x4(&geos[i]->Get(j).GetWorldMatrix())));
+		Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)][i];
 
-			geomDescs.push_back(geomDesc);
-		}
+		std::pair<D3D12_RAYTRACING_GEOMETRY_DESC, XMFLOAT4X4> geomDesc;
+		geomDesc.first.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+		geomDesc.first.Triangles.VertexBuffer.StartAddress = mesh.GetVertexBufferAddress();
+		geomDesc.first.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+		geomDesc.first.Triangles.VertexCount = mesh.m_Vertices.size();
+		geomDesc.first.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+		geomDesc.first.Triangles.IndexBuffer = mesh.GetIndexBufferAddress();
+		geomDesc.first.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+		geomDesc.first.Triangles.IndexCount = mesh.m_Indices.size();
+		geomDesc.first.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+		geomDesc.second = mesh.m_Constants.World;
+
+		geomDescs.push_back(geomDesc);
 	}
 	accelerationStructure.reset(new AccelerationStructure(pCore, geomDescs, 0));
 
@@ -110,7 +109,7 @@ void RayTracingPass::Create(std::vector<std::unique_ptr<Geometry>>& geos, std::m
 	}
 }
 
-void RayTracingPass::CreateBindless(std::vector<std::unique_ptr<Geometry>>& geos, std::map<std::string, PBRMaterial>& pbrMaterials, std::vector<std::unique_ptr<Texture>>& pbrTexture)
+void RayTracingPass::CreateBindless(Scene* scene)
 {
 	std::vector<Buffer*> vertexsBuffers;
 	std::vector<Buffer*> indexsBuffers;
@@ -119,37 +118,36 @@ void RayTracingPass::CreateBindless(std::vector<std::unique_ptr<Geometry>>& geos
 
 	std::vector<InstanceInfo> instanceInfos;
 	int instanceId = 0;
-	for (size_t i = 0; i < geos.size(); i++)
+
+	for (size_t i = 0; i < scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)].size(); i++)
 	{
-		for (size_t j = 0; j < geos[i]->size(); j++)
-		{
-			vertexsBuffers.push_back(geos[i]->Get(j).GetVertexBuffer());
-			indexsBuffers.push_back(geos[i]->Get(j).GetIndexBuffer());
+		Mesh& mesh = scene->m_Meshes[static_cast<size_t>(LayerType::Opaque)][i];
+		
+		vertexsBuffers.push_back(mesh.m_VertexBuffer.get());
+		indexsBuffers.push_back(mesh.m_IndexBuffer.get());
 
-			BufferViewerDesc vertexBufViewDesc;
-			vertexBufViewDesc.ViewerType = BufferViewerType::SRV;
-			vertexBufViewDesc.NumElements = geos[i]->Get(j).GetVertexsInfo().first;
-			vertexBufViewDesc.ElementSize = geos[i]->Get(j).GetVertexsInfo().second;
-			vertexBufViewDescs.push_back(vertexBufViewDesc);
-			BufferViewerDesc indexBufViewDesc;
-			indexBufViewDesc.ViewerType = BufferViewerType::SRV;
-			indexBufViewDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-			indexBufViewDesc.NumElements = geos[i]->Get(j).GetIndexsInfo().first;
-			indexBufViewDescs.push_back(indexBufViewDesc);
+		BufferViewerDesc vertexBufViewDesc;
+		vertexBufViewDesc.ViewerType = BufferViewerType::SRV;
+		vertexBufViewDesc.NumElements = mesh.m_Vertices.size();
+		vertexBufViewDesc.ElementSize = sizeof(Vertex);
+		vertexBufViewDescs.push_back(vertexBufViewDesc);
+		BufferViewerDesc indexBufViewDesc;
+		indexBufViewDesc.ViewerType = BufferViewerType::SRV;
+		indexBufViewDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+		indexBufViewDesc.NumElements = mesh.m_Indices.size();
+		indexBufViewDescs.push_back(indexBufViewDesc);
 
-			Mesh& mesh = geos[i]->Get(j);
-			PBRMaterial& mat = pbrMaterials[mesh.GetMat()];
+		BasePBRMat& mat = scene->m_Materials[mesh.m_MatID];
 
-			InstanceInfo info;
-			info.VertexBufferID = instanceId;
-			info.IndexBufferID = instanceId;
-			info.BaseColorTexID = mat.texId[0];
-			info.RoughnessMetallicTexID = mat.texId[1];
-			info.NormalTexID = mat.texId[2];
-			info.parameter = mat.parameter;
-			instanceInfos.push_back(info);
-			instanceId++;
-		}
+		InstanceInfo info;
+		info.VertexBufferID = instanceId;
+		info.IndexBufferID = instanceId;
+		info.BaseColorTexID = mat.m_IDs[0];
+		info.RoughnessMetallicTexID = mat.m_IDs[1];
+		info.NormalTexID = mat.m_IDs[2];
+		info.parameter = mat.GetParameter();
+		instanceInfos.push_back(info);
+		instanceId++;
 	}
 
 	bindlessVertexSRV.reset(new BufferViewer(pCore, vertexsBuffers, vertexBufViewDescs.data(), true));
@@ -158,15 +156,15 @@ void RayTracingPass::CreateBindless(std::vector<std::unique_ptr<Geometry>>& geos
 	
 	std::vector<Texture*>pTex;
 	std::vector<TextureViewerDesc> texViewDescs;
-	for (size_t i = 0; i < pbrTexture.size(); i++)
+	for (size_t i = 0; i < scene->m_Textures.size(); i++)
 	{
 		TextureViewerDesc texViewDesc;
 		texViewDesc.TexType = TextureType::Texture2D;
 		texViewDesc.ViewerType = TextureViewerType::SRV;
 		texViewDesc.MostDetailedMip = 0;
-		texViewDesc.NumMipLevels = pbrTexture[i]->GetDesc().MipLevels;
+		texViewDesc.NumMipLevels = scene->m_Textures[i]->GetDesc().MipLevels;
 		texViewDescs.push_back(texViewDesc);
-		pTex.push_back(pbrTexture[i].get());
+		pTex.push_back(scene->m_Textures[i].get());
 	}
 	bindlessPBRTexSRV.reset(new TextureViewer(pCore, pTex, texViewDescs.data(), true));
 }
@@ -176,15 +174,15 @@ void RayTracingPass::UpdateTASMatrixs(std::vector<XMFLOAT4X4>& matrixs)
 	accelerationStructure->UpdateMatrix(matrixs);
 }
 
-void RayTracingPass::Render(RayTracingContext& Context, Camera& camera, PointLight pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV)
+void RayTracingPass::Render(RayTracingContext& Context, XMFLOAT3 cameraPos, Light pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV)
 {
 	RayTracingConstants rtConstant;
-	rtConstant.cameraPosition = { camera.GetPosition3f().x ,camera.GetPosition3f().y ,camera.GetPosition3f().z ,1.0f };
-	rtConstant.pointLight = pointLight;
-	rtConstant.frameCount = frameCount++;
-	rtConstant.vertexSRVOffsetInHeap = bindlessVertexSRV->GetFirstGpuHandleOffsetInHeap();
-	rtConstant.indexSRVOffsetInHeap = bindlessIndexSRV->GetFirstGpuHandleOffsetInHeap();
-	rtConstant.pbrTexSRVOffsetInHeap = bindlessPBRTexSRV->GetFirstGpuHandleOffsetInHeap();
+	rtConstant.CameraPosition = { cameraPos.x ,cameraPos.y ,cameraPos.z ,1.0f };
+	rtConstant.FrameCount = frameCount++;
+	rtConstant.VertexSRVOffsetInHeap = bindlessVertexSRV->GetFirstGpuHandleOffsetInHeap();
+	rtConstant.IndexSRVOffsetInHeap = bindlessIndexSRV->GetFirstGpuHandleOffsetInHeap();
+	rtConstant.PBRTexSRVOffsetInHeap = bindlessPBRTexSRV->GetFirstGpuHandleOffsetInHeap();
+	rtConstant.PointLight = pointLight;
 
 	rayTracingConstantBuffer.reset(new Buffer(pCore, nullptr, sizeof(RayTracingConstants), true, true));
 	rayTracingConstantBuffer->Upload(&rtConstant);

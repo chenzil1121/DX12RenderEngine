@@ -80,6 +80,12 @@
     <ClCompile Include="..\RenderPass\GbufferPass.cpp">
       <Filter>RenderPass</Filter>
     </ClCompile>
+    <ClCompile Include="..\RenderPass\DeferredLightPass.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RenderPass\RayTracingPass.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
@@ -155,6 +161,12 @@
       <Filter>RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="..\RenderPass\GbufferPass.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\DeferredLightPass.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\RayTracingPass.h">
       <Filter>RenderPass</Filter>
     </ClInclude>
   </ItemGroup>

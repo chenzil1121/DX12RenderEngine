@@ -131,4 +131,25 @@ BRDFData GetBRDF(
 	return BRDF;
 }
 
+BRDFData GetBRDF(
+	in Texture2D<float4> AlbedoRoughness,
+	in Texture2D<float4> NormalMetallic,
+	in int2 ipos
+)
+{
+	BRDFData BRDF;
+	BRDF.baseColor.a = 1.0;
+	BRDF.baseColor.rgb = AlbedoRoughness.Load(int3(ipos, 0)).xyz;
+
+	BRDF.roughness = AlbedoRoughness.Load(int3(ipos, 0)).w;
+	BRDF.metallic = NormalMetallic.Load(int3(ipos, 0)).w;
+
+	BRDF.diffuseColor = (float3(1.0, 1.0, 1.0) - F0_DIELECTRIC.rrr) * (1.0 - BRDF.metallic) * BRDF.baseColor.rgb;
+	BRDF.f0 = lerp(F0_DIELECTRIC.rrr, BRDF.baseColor.rgb, BRDF.metallic);
+	float reflectance = max(max(BRDF.f0.r, BRDF.f0.g), BRDF.f0.b);
+	BRDF.f90 = clamp(reflectance * 50.0, 0.0, 1.0) * float3(1.0, 1.0, 1.0);
+
+	return BRDF;
+}
+
 #endif
