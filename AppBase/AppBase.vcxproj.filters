@@ -86,6 +86,12 @@
     <ClCompile Include="..\RenderPass\RayTracingPass.cpp">
       <Filter>RenderPass</Filter>
     </ClCompile>
+    <ClCompile Include="..\RenderPass\SVGFPass.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RenderPass\ModulateIllumination.cpp">
+      <Filter>RenderPass</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
@@ -167,6 +173,12 @@
       <Filter>RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="..\RenderPass\RayTracingPass.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\SVGFPass.h">
+      <Filter>RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RenderPass\ModulateIllumination.h">
       <Filter>RenderPass</Filter>
     </ClInclude>
   </ItemGroup>

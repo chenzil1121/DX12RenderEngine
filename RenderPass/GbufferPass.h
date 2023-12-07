@@ -35,10 +35,6 @@ public:
 		return PreSRV.get();
 	}
 
-	Texture* GetVisibility()
-	{
-		return RTs[5].get();
-	}
 private:
 
 	RenderDevice* pCore;

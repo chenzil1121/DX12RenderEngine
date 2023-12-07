@@ -1,8 +1,8 @@
 #pragma once
 #include "RenderDevice.h"
 #include "SwapChain.h"
-#include"Buffer.h"
-#include "RenderParameter.h"
+#include "Buffer.h"
+#include "Scene.h"
 
 class ModulateIllumination
 {
@@ -11,7 +11,7 @@ public:
 
 	void Create();
 
-	void Render(GraphicsContext& Context, Buffer* PassConstantBuffer, PointLight pointLight, TextureViewer* GbufferSRV, TextureViewer* FilteredShadowSRV, TextureViewer* FilteredReflectionSRV);
+	void Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Light pointLight, TextureViewer* GbufferSRV, TextureViewer* FilteredShadowSRV, TextureViewer* FilteredReflectionSRV);
 private:
 	RenderDevice* pCore;
 	SwapChain* pSwapChain;

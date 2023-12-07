@@ -99,7 +99,7 @@ void VS(VSInput VSIn, out PSInput PSIn)
 void PS(in PSInput  PSIn, out PSOutput PSOut)
 {
     float3 position = PSIn.PosW;
-    float3 albedo = sRGB_Linear(g_BaseColorMap.Sample(g_samLinearWrap, PSIn.TexC).rgb * g_BaseColorFactor.rgb);
+    float3 albedo = sRGB_Linear(g_BaseColorMap.Sample(g_samLinearWrap, PSIn.TexC).rgb) * g_BaseColorFactor.rgb;
 
     float3 normalMap = g_NormalMap.Sample(g_samLinearWrap, PSIn.TexC).rgb * float3(2.0, 2.0, 2.0) - float3(1.0, 1.0, 1.0);
     // We have to compute gradients in uniform flow control to avoid issues with perturbed normal

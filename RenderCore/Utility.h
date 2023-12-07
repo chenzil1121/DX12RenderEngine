@@ -141,6 +141,7 @@ namespace Utility
         Microsoft::WRL::ComPtr<IDxcCompiler>pCompiler;
         Microsoft::WRL::ComPtr<IDxcLibrary>pLibrary;
         Microsoft::WRL::ComPtr<IDxcBlobEncoding>pTextBlob; 
+        Microsoft::WRL::ComPtr<IDxcIncludeHandler>pIncludeHander;
         Microsoft::WRL::ComPtr<IDxcOperationResult>pResult;
         if (FAILED(g_DxcDllHelper.InitializeForDll(L"../ThirdParty/DXC/dxcompiler.dll", L"../ThirdParty/DXC/dxil.dll", "DxcCreateInstance")))
         {
@@ -177,8 +178,14 @@ namespace Utility
             __debugbreak();
         }
 
+        if (FAILED(pLibrary->CreateIncludeHandler(pIncludeHander.GetAddressOf())))
+        {
+            OutputDebugStringA("Create IDxcIncludeHandler Fail\n");
+            __debugbreak();
+        }
+
         // Compile
-        if (FAILED(pCompiler->Compile(pTextBlob.Get(), filename, L"", target, nullptr, 0, nullptr, 0, nullptr, pResult.GetAddressOf())))
+        if (FAILED(pCompiler->Compile(pTextBlob.Get(), filename, L"", target, nullptr, 0, nullptr, 0, pIncludeHander.Get(), pResult.GetAddressOf())))
         {
             OutputDebugStringA("Compile Fail\n");
         }

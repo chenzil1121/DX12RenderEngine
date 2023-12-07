@@ -174,7 +174,7 @@ void RayTracingPass::UpdateTASMatrixs(std::vector<XMFLOAT4X4>& matrixs)
 	accelerationStructure->UpdateMatrix(matrixs);
 }
 
-void RayTracingPass::Render(RayTracingContext& Context, XMFLOAT3 cameraPos, Light pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV)
+void RayTracingPass::DispatchRays(RayTracingContext& Context, XMFLOAT3 cameraPos, Light pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV)
 {
 	RayTracingConstants rtConstant;
 	rtConstant.CameraPosition = { cameraPos.x ,cameraPos.y ,cameraPos.z ,1.0f };

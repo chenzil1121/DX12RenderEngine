@@ -64,6 +64,7 @@ public:
 	{
 		D3D12_RESOURCE_DESC uavDesc = pSwapChain->GetBackBufferDesc();
 		uavDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		uavDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		reflectOutput.reset(new Texture(pCore, uavDesc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"ReflectOutput"));
 
 		TextureViewerDesc uavViewdesc;
@@ -97,7 +98,7 @@ public:
 		return reflectOutputSRV.get();
 	}
 
-	void Render(RayTracingContext& Context, XMFLOAT3 cameraPos, Light pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV);
+	void DispatchRays(RayTracingContext& Context, XMFLOAT3 cameraPos, Light pointLight, TextureViewer* skyViewer, TextureViewer* GbufferSRV);
 
 private:
 	RenderDevice* pCore;

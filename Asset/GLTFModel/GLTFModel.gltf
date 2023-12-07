@@ -221,7 +221,7 @@
         },
         {
             "doubleSided" : true,
-            "name" : "Bronze",
+            "name" : "Chromium",
             "normalTexture" : {
                 "index" : 19
             },
@@ -523,18 +523,18 @@
         },
         {
             "mimeType" : "image/png",
-            "name" : "Aluminum_Normal",
-            "uri" : "Aluminum_Normal.png"
+            "name" : "Chromium_Normal",
+            "uri" : "Chromium_Normal.png"
         },
         {
             "mimeType" : "image/png",
-            "name" : "Aluminum_Albedo",
-            "uri" : "Aluminum_Albedo.png"
+            "name" : "Chromium_Albedo",
+            "uri" : "Chromium_Albedo.png"
         },
         {
             "mimeType" : "image/png",
-            "name" : "Bronze_Orm",
-            "uri" : "Bronze_Orm.png"
+            "name" : "Chromium_Orm",
+            "uri" : "Chromium_Orm.png"
         }
     ],
     "accessors" : [

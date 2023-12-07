@@ -1,6 +1,6 @@
 #ifndef RAYTRACING_HLSL
 #define RAYTRACING_HLSL
-
+#include "BRDF.hlsl"
 struct Light
 {
     float3 Strength;
@@ -104,11 +104,6 @@ float2 HitAttributeFloat2(float2 vertexAttribute[3], BuiltInTriangleIntersection
         attr.barycentrics.y * (vertexAttribute[2] - vertexAttribute[0]);
 }
 
-float3 sRGB_Linear(float3 x)
-{
-    return float3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
-}
-
 uint RNG(uint seed)
 {
     // Condensed version of pcg_output_rxs_m_xs_32_32
@@ -174,8 +169,6 @@ float3 UniformSampleCone(float2 u, float cosThetaMax)
 // Brian Karis, Epic Games "Real Shading in Unreal Engine 4"
 float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 {
-    float PI = 3.14159265359;
-
     float m = Roughness * Roughness;
     float m2 = m * m;
 
@@ -188,60 +181,57 @@ float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
     H.x = SinTheta * cos(Phi);
     H.y = SinTheta * sin(Phi);
     H.z = CosTheta;
-    //return float3(Phi, Phi, Phi);
     return SampleTan2W(H, N);
 }
 
-//////////////////////////////////////////////////// PBR rendering method
-// [Smith 1967, "Geometrical shadowing of a random rough surface"]
-float Vis_Smith(float roughness, float NoV, float NoL)
+//注意用了重要性采样之后需要除以PDF-----D*NoH/(4*VoH)
+float3 DoPbrSpecular(float3 radiance, float3 L, float3 N, float3 V, float3 P, float3 albedo, float roughness, float metallic)
 {
-    const float a = roughness * roughness;
-    const float a2 = a * a;
+    float3 F0 = F0_DIELECTRIC.rrr;
+    F0 = lerp(F0, albedo, metallic);
+    float reflectance = max(max(F0.r, F0.g), F0.b);
+    float3 F90 = clamp(reflectance * 50.0, 0.0, 1.0) * float3(1.0, 1.0, 1.0);
 
-    const float vis_SmithV = NoV + sqrt(NoV * (NoV - NoV * a2) + a2);
-    const float vis_SmithL = NoL + sqrt(NoL * (NoL - NoL * a2) + a2);
-
-    return 1.0 / (vis_SmithV * vis_SmithL);
-}
-
-float3 fresnelSchlick(float cosTheta, float3 F0)
-{
-    float fc = pow(1.0 - cosTheta, 5.0);
-    // Anything less than 2% is physically impossible and is instead considered to be shadowing
-    return saturate(50.0 * F0.g) * fc + (1.0 - fc) * F0;
-}
-
-float3 DoPbrRadiance(float3 radiance, float3 L, float3 N, float3 V, float3 P, float3 albedo, float roughness, float metallic)
-{
-    float PI = 3.14159265359;
-    const float3 F0 = lerp(0.04, albedo, metallic);
     float3 H = normalize(V + L);
+    float NoL = clamp(dot(N, L), 0.0, 1.0);
+    float NoV = clamp(dot(N, V), 0.0, 1.0);
+    float NoH = clamp(dot(N, H), 0.0, 1.0);
+    float LoH = clamp(dot(L, H), 0.0, 1.0);
+    float VoH = clamp(dot(V, H), 0.0, 1.0);
 
-    // scale light by NdotL
-    float NdotL = saturate(dot(N, L));
-    float NdotV = saturate(dot(N, V));
+    float AlphaRoughness = roughness * roughness;
 
-    float NdotH = saturate(dot(N, H));
-    float VdotH = saturate(dot(V, H));
+    if (NoL <= 0.0 && NoV <= 0.0)
+        return float3(0.0, 0.0, 0.0);
 
-    float vis = Vis_Smith(roughness, NdotV, NdotL);
+    float G = SmithGGXVisibilityCorrelated(NoL, NoV, AlphaRoughness);
+    float G_Vis = 4.0 * SmithGGXVisibilityCorrelated(NoL, NoV, roughness) * VoH / NoH;
+    float3 F = SchlickReflection(VoH, F0, F90);
 
-    float3 F = fresnelSchlick(VdotH, F0);
+    float3 SpecularBRDF = F * G_Vis;
 
-    return NdotL * F * vis * (4.0 * VdotH / NdotH) * radiance;
+    return SpecularBRDF * NoL * radiance;
 }
 
-float3 DoPbrDiffuse(float3 bounceColor, float3 albedo)
+//注意用了重要性采样之后需要除以PDF-----NoL/Pi
+float3 DoPbrDiffuse(float3 radiance, float3 albedo, float metallic, float3 L, float3 V)
 {
-    return bounceColor * albedo * (1.0 - 0.04);
+    float3 F0 = F0_DIELECTRIC.rrr;
+    F0 = lerp(F0, albedo, metallic);
+    float reflectance = max(max(F0.r, F0.g), F0.b);
+    float3 F90 = clamp(reflectance * 50.0, 0.0, 1.0) * float3(1.0, 1.0, 1.0);
+    float3 diffuseColor = (float3(1.0, 1.0, 1.0) - F0_DIELECTRIC.rrr) * (1.0 - metallic) * albedo;
+
+    float3 H = normalize(V + L);
+    float VoH = clamp(dot(V, H), 0.0, 1.0);
+
+    float3 F = SchlickReflection(VoH, F0, F90);
+    return radiance * diffuseColor * (1.0 - F);
 }
 
 // Compute local direction first and transform it to world space
 float3 computeLocalDirectionCos(float2 xi)
 {
-    float PI = 3.14159265359;
-
     const float phi = 2.0 * PI * xi.x;
 
     // Only near the specular direction according to the roughness for importance sampling
@@ -312,13 +302,19 @@ void MyRaygenShader()
     float roughness = g_AlbedoRoughness.Load(int3(launchIndex.x, launchIndex.y, 0)).w;
     float metallic = g_NormalMetallic.Load(int3(launchIndex.x, launchIndex.y, 0)).w;
     float3 normal = g_NormalMetallic.Load(int3(launchIndex.x, launchIndex.y, 0)).xyz;
+    float3 diffuseColor = (float3(1.0, 1.0, 1.0) - F0_DIELECTRIC.rrr) * (1.0 - metallic) * albedo;
 
     // Lighting is performed in world space.
     float3 P = position;
     float3 V = normalize(g_RayTracingCB.CameraPosition.xyz - position);
-    float3 N = normal;
+    float3 N = normalize(normal);
     // Make sure our normal is pointed the right direction
-    if (dot(N, V) <= 0.0f) N = -N;
+    if (dot(N, V) <= 0.0f)
+    {
+        g_ShadowOutput[launchIndex.xy] = float4(0, 0, 0, 1);
+        g_ReflectOutput[launchIndex.xy] = float4(0, 0, 0, 1);
+        return;
+    }
 
     //Shadow
     float Lo = 0;
@@ -400,15 +396,15 @@ void MyRaygenShader()
         //base material specular
         if (secondaryPayload.color.w > 0.1f)
         {
-            Lr += DoPbrRadiance(secondaryPayload.color.xyz, L, N, V, P, albedo, roughness, metallic);
+            Lr = DoPbrSpecular(secondaryPayload.color.xyz, L, N, V, P, albedo, roughness, metallic);
         }
         //base material diffuse
-        if (metallic < 1.0f)
         {
+            L = computeDirectionCos(N, xi);
             RayDesc raySecondarydif;
             raySecondarydif.TMin = 0.0f;
             raySecondarydif.Origin = P;
-            raySecondarydif.Direction = computeDirectionCos(N, xi);
+            raySecondarydif.Direction = L;
             raySecondarydif.TMax = 10000.0f;
             RayPayload secondarydifPayload;
             secondarydifPayload.color = float4(0, 0, 0, 0);
@@ -416,8 +412,15 @@ void MyRaygenShader()
             TraceRay(g_Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
                 0xFF, 1, 0, 1, raySecondarydif, secondarydifPayload);
 
-            Lr += DoPbrDiffuse(secondarydifPayload.color.xyz, albedo);
+            Lr += DoPbrDiffuse(secondarydifPayload.color.xyz, albedo, metallic, L, V);
         }
+    }
+
+    if (any(isnan(Lr))) {
+        Lr = float3(0.0f, 0.0f, 0.0f);
+    }
+    if (any(isinf(Lr))) {
+        Lr = float3(1.0f, 1.0f, 1.0f);
     }
   
     // Write the raytraced color to the output texture.
@@ -493,6 +496,7 @@ void MySecondaryClosestHitShader(inout RayPayload payload, in BuiltInTriangleInt
     albedo = sRGB_Linear(albedo);
     float metallic = g_PBRTextures[g_RayTracingCB.PBRTexSRVOffsetInHeap + instanceInfo.RoughnessMetallicTexID].SampleLevel(g_samLinearWarp, TexCoord, 0).b * instanceInfo.MetallicFactor;
     float roughness = g_PBRTextures[g_RayTracingCB.PBRTexSRVOffsetInHeap + instanceInfo.RoughnessMetallicTexID].SampleLevel(g_samLinearWarp, TexCoord, 0).g * instanceInfo.RoughnessFactor;
+    float3 sampleNormal = g_PBRTextures[g_RayTracingCB.PBRTexSRVOffsetInHeap + instanceInfo.NormalTexID].SampleLevel(g_samLinearWarp, TexCoord, 0).rgb;
 
     float3 P = hitPosition;
     //float3 N = getFromNormalMapping(sampleNormal, worldNormal, vertexPositions, vertexTexCoord, (float3x3)ObjectToWorld3x4(), instanceInfo.HasUV);
@@ -500,20 +504,17 @@ void MySecondaryClosestHitShader(inout RayPayload payload, in BuiltInTriangleInt
     float3 V = -WorldRayDirection();
 
     float3 color = 0.0f;
-    //base material diffuse
-    if (metallic < 0.5f)
-    {
-        float3 direction = computeDirectionCos(N, xi);
-        float3 bounceColor = g_SkyboxTexture.SampleLevel(g_samAnisotropicClamp, direction, 0).xyz;
-        color += DoPbrDiffuse(bounceColor, albedo);
-    }
 
     //base material specular
     float3 H = ImportanceSampleGGX(xi, roughness, N);
     float3 direction = reflect(-V, H);
     float3 bounceColor = g_SkyboxTexture.SampleLevel(g_samAnisotropicClamp, direction, 0).xyz;
+    color += DoPbrSpecular(bounceColor, direction, N, V, P, albedo, roughness, metallic);
 
-    color += DoPbrRadiance(bounceColor, direction, N, V, P, albedo, roughness, metallic);
+    //diffuse
+    direction = computeDirectionCos(N, xi);
+    bounceColor = g_SkyboxTexture.SampleLevel(g_samAnisotropicClamp, direction, 0).xyz;
+    color += DoPbrDiffuse(bounceColor, albedo, metallic, direction, V);
 
     payload.color = float4(color, 1.0f);
 }

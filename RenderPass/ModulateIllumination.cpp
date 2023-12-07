@@ -13,8 +13,8 @@ void ModulateIllumination::Create()
 	ComPtr<ID3DBlob> ModulateIlluminationVSByteCode = nullptr;
 	ComPtr<ID3DBlob> ModulateIlluminationPSByteCode = nullptr;
 
-	ModulateIlluminationVSByteCode = Utility::CompileShader(L"Shader/ModulateIllumination.hlsl", nullptr, "VS", "vs_5_1");
-	ModulateIlluminationPSByteCode = Utility::CompileShader(L"Shader/ModulateIllumination.hlsl", nullptr, "PS", "ps_5_1");
+	ModulateIlluminationVSByteCode = Utility::CompileShader(L"../RenderPass/Shader/ModulateIllumination.hlsl", nullptr, "VS", "vs_5_1");
+	ModulateIlluminationPSByteCode = Utility::CompileShader(L"../RenderPass/Shader/ModulateIllumination.hlsl", nullptr, "PS", "ps_5_1");
 
 	//RootSignature
 	modulateIlluminationRS.reset(new RootSignature(5));
@@ -48,9 +48,9 @@ void ModulateIllumination::Create()
 	modulateIlluminationPSO->Finalize(pCore->g_Device);
 }
 
-void ModulateIllumination::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, PointLight pointLight, TextureViewer* GbufferSRV, TextureViewer* FilteredShadowSRV, TextureViewer* FilteredReflectionSRV)
+void ModulateIllumination::Render(GraphicsContext& Context, Buffer* PassConstantBuffer, Light pointLight, TextureViewer* GbufferSRV, TextureViewer* FilteredShadowSRV, TextureViewer* FilteredReflectionSRV)
 {
-	pointLightConstantBuffer.reset(new Buffer(pCore, nullptr, sizeof(PointLight), true, true, L"ModulateIllumination PointLight CB"));
+	pointLightConstantBuffer.reset(new Buffer(pCore, nullptr, sizeof(Light), true, true, L"ModulateIllumination PointLight CB"));
 	pointLightConstantBuffer->Upload(&pointLight);
 
 	Context.SetPipelineState(*modulateIlluminationPSO);

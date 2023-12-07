@@ -167,38 +167,4 @@ void PS(in  PSInput  PSIn, out PSOutput PSOut)
     litColor.rgb = ToneMap(litColor.rgb, TMAttribs, 0.3);
 
     PSOut.Color = float4(litColor.rgb, litColor.a);
-    /*if (g_DebugViewType != 0)
-    {
-        switch (g_DebugViewType)
-        {
-        case 1:PSOut.Color.rgb = BRDF.baseColor.rgb;
-            break;
-        case 2:PSOut.Color = float4(BRDF.baseColor.a, BRDF.baseColor.a, BRDF.baseColor.a, 1.0);
-            break;
-        case 3:PSOut.Color.rgb = sRGB_Linear(normalMap.rgb);
-            break;
-        case 4:break;
-        case 5:break;
-        case 6:PSOut.Color.rgb = sRGB_Linear(BRDF.metallic * float3(1.0, 1.0, 1.0));
-            break;
-        case 7:PSOut.Color.rgb = sRGB_Linear(BRDF.roughness * float3(1.0, 1.0, 1.0));
-            break;
-        case 8:PSOut.Color.rgb = BRDF.diffuseColor;
-            break;
-        case 9:PSOut.Color.rgb = BRDF.f0;
-            break;
-        case 10:PSOut.Color.rgb = BRDF.f90;
-            break;
-        case 11:PSOut.Color.rgb = sRGB_Linear(normal);
-            break;
-        case 12:PSOut.Color.rgb = sRGB_Linear(perturbedNormal);
-            break;
-        case 13:PSOut.Color.rgb = dot(perturbedNormal, view) * float3(1.0, 1.0, 1.0);
-            break;
-        case 14:PSOut.Color.rgb = IBLContrib.Diffuse;
-            break;
-        case 15:PSOut.Color.rgb = IBLContrib.Specular;
-            break;
-        }
-    }*/
 }

@@ -26,15 +26,15 @@ void SVGFPass::Create(bool isDemodulate)
 			NULL, NULL
 		};
 
-		ReprojectByteCode = Utility::CompileShader(L"Shader/SVGFReproject.hlsl", define, "main", "cs_5_1");
-		EstimateVarByteCode = Utility::CompileShader(L"Shader/SVGFEstimateVar.hlsl", define, "main", "cs_5_1");
-		AtrousByteCode = Utility::CompileShader(L"Shader/SVGFAtrous.hlsl", define, "main", "cs_5_1");
+		ReprojectByteCode = Utility::CompileShader(L"../RenderPass/Shader/SVGFReproject.hlsl", define, "main", "cs_5_1");
+		EstimateVarByteCode = Utility::CompileShader(L"../RenderPass/Shader/SVGFEstimateVar.hlsl", define, "main", "cs_5_1");
+		AtrousByteCode = Utility::CompileShader(L"../RenderPass/Shader/SVGFAtrous.hlsl", define, "main", "cs_5_1");
 	}
 	else
 	{
-		ReprojectByteCode = Utility::CompileShader(L"Shader/SVGFReproject.hlsl", nullptr, "main", "cs_5_1");
-		EstimateVarByteCode = Utility::CompileShader(L"Shader/SVGFEstimateVar.hlsl", nullptr, "main", "cs_5_1");
-		AtrousByteCode = Utility::CompileShader(L"Shader/SVGFAtrous.hlsl", nullptr, "main", "cs_5_1");
+		ReprojectByteCode = Utility::CompileShader(L"../RenderPass/Shader/SVGFReproject.hlsl", nullptr, "main", "cs_5_1");
+		EstimateVarByteCode = Utility::CompileShader(L"../RenderPass/Shader/SVGFEstimateVar.hlsl", nullptr, "main", "cs_5_1");
+		AtrousByteCode = Utility::CompileShader(L"../RenderPass/Shader/SVGFAtrous.hlsl", nullptr, "main", "cs_5_1");
 	}
 
 	//Reproject

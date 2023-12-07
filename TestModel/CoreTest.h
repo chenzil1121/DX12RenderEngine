@@ -16,7 +16,8 @@
 #include"../RenderPass/VarianceShadowMap.h"
 #include"../RenderPass/DeferredLightPass.h"
 #include"../RenderPass/RayTracingPass.h"
-
+#include"../RenderPass/SVGFPass.h"
+#include"../RenderPass/ModulateIllumination.h"
 //#define FOWARD
 //#define DEFFER
 #define DXR
@@ -75,6 +76,9 @@ public:
     std::unique_ptr<FXAA> m_FXAA;
     std::unique_ptr<VarianceShadowMap> m_VSM;
     std::unique_ptr<RayTracingPass> m_RayTracingPass;
+    std::unique_ptr<SVGFPass> m_svgfShadowPass;
+    std::unique_ptr<SVGFPass> m_svgfReflectionPass;
+    std::unique_ptr<ModulateIllumination> m_ModulateIlluminationPass;
 
     std::unique_ptr<Scene> m_Scene;
 

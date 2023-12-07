@@ -29,8 +29,16 @@ bool CoreTest::Initialize()
 	m_DeferredLightPass.reset(new DeferredLightPass(&m_Device, m_SwapChain.get()));
 
 #ifdef DXR
+	//RayTracingPass
 	m_RayTracingPass.reset(new RayTracingPass(&m_Device, m_SwapChain.get(), m_Scene.get()));
-#endif // DXR
+
+	//SVGF
+	m_svgfShadowPass.reset(new SVGFPass(&m_Device, m_SwapChain.get()));
+	m_svgfReflectionPass.reset(new SVGFPass(&m_Device, m_SwapChain.get(), true, 2));
+
+	//ModulateIllumination
+	m_ModulateIlluminationPass.reset(new ModulateIllumination(&m_Device, m_SwapChain.get()));
+#endif
 
 	//FXAA
 	m_FXAA.reset(new FXAA(&m_Device, m_SwapChain.get()));
@@ -65,7 +73,7 @@ void CoreTest::CreateResources()
 	//m_Scene.reset(new Scene("../Asset/Sponza_new/Sponza_new.gltf", &m_Device));
 
 	m_Scene->AddDirectionalLight({ 10.0f, 10.0f, 10.0f }, { m_LightDirection[0], m_LightDirection[1], m_LightDirection[2] });
-	m_Scene->AddPointLight({ 10.0f, 10.0f, 10.0f }, { 0.0f, 20.0f, 3.0f }, 0.0, 1.0);
+	m_Scene->AddPointLight({ 5.0f, 5.0f, 5.0f }, { 0.0f, 20.0f, 3.0f }, 0.0, 1.0);
 	m_MainPassCB.FirstLightIndex = XMINT3(1, 0, 0);
 }
 
@@ -245,9 +253,19 @@ void CoreTest::Render(const GameTimer& gt)
 	m_GbufferPass->Render(Context, m_PassConstantBuffer.get(), m_Scene.get());
 
 	//RayTracingPass
-	m_RayTracingPass->Render(Context.GetRayTracingContext(), m_Camera.GetPosition3f(), m_Scene->m_Lights[1], m_EnvMapPass->GetEnvMapView(), m_GbufferPass->GetGbufferSRV());
+	m_RayTracingPass->DispatchRays(Context.GetRayTracingContext(), m_Camera.GetPosition3f(), m_Scene->m_Lights[1], m_EnvMapPass->GetEnvMapView(), m_GbufferPass->GetGbufferSRV());
 
-	//m_ImGui->RenderDrawData(Context);
+	//SVGF
+	m_svgfShadowPass->Compute(Context.GetComputeContext(), m_GbufferPass->GetGbufferSRV(), m_GbufferPass->GetPreSRV(), m_RayTracingPass->GetShadowOutputSRV());
+	m_svgfReflectionPass->Compute(Context.GetComputeContext(), m_GbufferPass->GetGbufferSRV(), m_GbufferPass->GetPreSRV(), m_RayTracingPass->GetReflectOutputSRV());
+
+	//ModulateIllumination
+	m_ModulateIlluminationPass->Render(Context, m_PassConstantBuffer.get(), m_Scene->m_Lights[1], m_GbufferPass->GetGbufferSRV(), m_svgfShadowPass->GetFilteredSRV(), m_svgfReflectionPass->GetFilteredSRV());
+
+	//EnvMap
+	m_EnvMapPass->Render(Context, m_PassConstantBuffer.get());
+
+	m_ImGui->RenderDrawData(Context);
 	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
 
 	Context.Finish(true);
@@ -282,6 +300,9 @@ void CoreTest::OnResize()
 
 #ifdef DXR
 	m_RayTracingPass->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
+
+	m_svgfShadowPass->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
+	m_svgfReflectionPass->Resize(m_Device.g_DisplayWidth, m_Device.g_DisplayHeight, (FLOAT)m_Device.g_DisplayWidth / (FLOAT)m_Device.g_DisplayHeight);
 #endif
 }
 
