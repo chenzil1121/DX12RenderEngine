@@ -19,8 +19,8 @@
 #include"../RenderPass/SVGFPass.h"
 #include"../RenderPass/ModulateIllumination.h"
 //#define FOWARD
-//#define DEFFER
-#define DXR
+#define DEFFER
+//#define DXR
 
 class CoreTest :public AppBase
 {

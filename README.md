@@ -1,16 +1,33 @@
 # DX12RenderEngine
-DX12学习引擎
+DX12 Learning Toy Render
 
-![avatar](Doc/Example.png)
-
+## Showcase
+- Foward/Deffer Render
+![avatar](Doc/DefferRender.png)  
+![avatar](Doc/VSM.png)  
+- Hybrid Render  
+Raytracing Reflection(Denoised)
+![avatar](Doc/RT_Reflection.png)
+Raytracing Shadow(Denoised)
+![avatar](Doc/RT_Shadow.png)
+Raytracing AO(Denoised)
+![avatar](Doc/RT_AO.png)
 ## Require
 Assimp  
-RTX GPU
-## Render Feature
+GPU/Driver that supports DXR and RTX
+## Feature
+### Graphics 
 - PBR Material   
 - IBL  
 - EnvMap
-- SimpleFowardRender
-- SimpleDefferRender
+- VSM
+- Simple Foward Render
+- Simple Deffer Render
+- Simple Hybrid Render
 - SVGF
-- DXR
+### D3D12
+- Bindless Resource For DXR
+- Simple RenderCore(https://diligentgraphics.com/diligent-engine/architecture/d3d12/)
+  - Managing Descriptor Heaps
+  - Managing Resource Lifetimes
+  - Managing Dynamic Resources

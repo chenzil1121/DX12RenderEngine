@@ -121,12 +121,11 @@ void PS(in  float4 Pos     : SV_Position,
 	float3 ColorIndirect = reflectivity * albedo;
 
 	ColorSum = shadow * ColorDirect + ao * ColorIndirect;
-	//ColorSum = ColorIndirect;
 
-	ToneMappingAttribs TMAttribs;
-	TMAttribs.fMiddleGray = 0.18;
-	TMAttribs.fWhitePoint = 3.0;
-	TMAttribs.fLuminanceSaturation = 1.0;
-	ColorSum = ToneMap(ColorSum, TMAttribs, 0.3);
+	//ToneMappingAttribs TMAttribs;
+	//TMAttribs.fMiddleGray = 0.18;
+	//TMAttribs.fWhitePoint = 3.0;
+	//TMAttribs.fLuminanceSaturation = 1.0;
+	//ColorSum = ToneMap(ColorSum, TMAttribs, 0.3);
 	Color = float4(ColorSum, 1.0);
 }

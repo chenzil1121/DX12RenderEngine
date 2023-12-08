@@ -265,6 +265,9 @@ void CoreTest::Render(const GameTimer& gt)
 	//EnvMap
 	m_EnvMapPass->Render(Context, m_PassConstantBuffer.get());
 
+	//FXAA
+	m_FXAA->Render(Context);
+
 	m_ImGui->RenderDrawData(Context);
 	Context.TransitionResource(m_SwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
 
